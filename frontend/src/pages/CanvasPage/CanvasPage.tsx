@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { ReactFlow, Background, Controls, BackgroundVariant } from '@xyflow/react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { ReactFlow, Background, Controls, BackgroundVariant, useNodesState } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import UbuntuNode from '../../features/nodes/UbuntuNode/UbuntuNode';
@@ -32,8 +32,12 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { toast, showToast, dismissToast } = useToast();
 
-  // Track visual node coordinates manually, saved to localStorage
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  // React Flow managed nodes state — handles drag, selection, dimensions internally
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const edges: Edge[] = [];
+
+  // Ref to track saved positions (avoids re-render loops)
+  const positionsRef = useRef<Record<string, { x: number; y: number }>>({});
 
   const fetchContainers = async () => {
     try {
@@ -50,13 +54,13 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     }
   };
 
-  // Load visual coordinates on mount and poll container states
+  // Load saved positions and start polling
   useEffect(() => {
     fetchContainers();
     const savedLayout = localStorage.getItem(`akal-lab-graph-layout-${projectId}`);
     if (savedLayout) {
       try {
-        setPositions(JSON.parse(savedLayout));
+        positionsRef.current = JSON.parse(savedLayout);
       } catch (err) {
         console.error(err);
       }
@@ -66,8 +70,44 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     return () => clearInterval(timer);
   }, [projectId]);
 
+  // Sync container data into React Flow nodes when containers change
+  useEffect(() => {
+    setNodes(prevNodes => {
+      return containers.map((c, index) => {
+        const existing = prevNodes.find(n => n.id === c.id);
+        const defaultX = 150 + (index % 3) * 280;
+        const defaultY = 150 + Math.floor(index / 3) * 220;
+        const savedPos = positionsRef.current[c.id];
+        // Keep existing position if node was already on canvas, otherwise use saved or default
+        const position = existing?.position || savedPos || { x: defaultX, y: defaultY };
+
+        return {
+          id: c.id,
+          type: 'ubuntu',
+          position,
+          data: {
+            id: c.id,
+            name: c.name,
+            state: c.state,
+            status: c.status,
+            onStart: handleStart,
+            onStop: handleStop,
+            onDelete: (id: string) => setDeleteTarget(id),
+            onTerminalOpen: onTerminalOpen,
+          },
+        };
+      });
+    });
+  }, [containers]);
+
   const saveGraphLocally = () => {
-    localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positions));
+    // Extract current positions from React Flow nodes state
+    const currentPositions: Record<string, { x: number; y: number }> = {};
+    nodes.forEach(n => {
+      currentPositions[n.id] = { x: n.position.x, y: n.position.y };
+    });
+    positionsRef.current = currentPositions;
+    localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(currentPositions));
     showToast('Graph layout saved successfully');
   };
 
@@ -121,12 +161,9 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       const res = await fetch(`http://localhost:5000/api/projects/${projectId}/containers/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setContainers(prev => prev.filter(c => c.id !== id));
-        setPositions(prev => {
-          const updated = { ...prev };
-          delete updated[id];
-          localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(updated));
-          return updated;
-        });
+        // Clean up saved position
+        delete positionsRef.current[id];
+        localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positionsRef.current));
         showToast('Container deleted');
         fetchContainers();
       }
@@ -143,38 +180,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     ubuntu: UbuntuNode,
   }), []);
 
-  // Update nodes coordinates when user drags them on the Canvas
-  const onNodeDragStop = (_event: any, node: Node) => {
-    setPositions(prev => ({
-      ...prev,
-      [node.id]: { x: node.position.x, y: node.position.y }
-    }));
-  };
-
-  // Map active containers state to React Flow Nodes
-  const nodes: Node[] = containers.map((c, index) => {
-    const defaultX = 150 + (index % 3) * 280;
-    const defaultY = 150 + Math.floor(index / 3) * 220;
-    const position = positions[c.id] || { x: defaultX, y: defaultY };
-
-    return {
-      id: c.id,
-      type: 'ubuntu',
-      position,
-      data: {
-        id: c.id,
-        name: c.name,
-        state: c.state,
-        status: c.status,
-        onStart: handleStart,
-        onStop: handleStop,
-        onDelete: (id: string) => setDeleteTarget(id),
-        onTerminalOpen: onTerminalOpen,
-      },
-    };
-  });
-
-  const edges: Edge[] = [];
+  // Save position to ref when drag ends
+  const onNodeDragStop = useCallback((_event: any, node: Node) => {
+    positionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
+  }, []);
 
   return (
     <div style={styles.wrapper}>
@@ -225,6 +234,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
           onNodeDragStop={onNodeDragStop}
           fitView
         >
