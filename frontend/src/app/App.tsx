@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import CanvasPage from '../pages/CanvasPage/CanvasPage';
 import TerminalModal from '../features/terminal/components/TerminalModal';
-
 import ProjectsPage from '../pages/ProjectsPage/ProjectsPage';
-
-interface TerminalInfo {
-  id: string;
-  name: string;
-}
-
-interface ProjectInfo {
-  id: string;
-  name: string;
-}
+import type { ProjectInfo, TerminalInfo } from '../shared/types';
 
 function App() {
   const [activeProject, setActiveProject] = useState<ProjectInfo | null>(null);
