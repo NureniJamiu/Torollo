@@ -118,14 +118,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 16px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+    borderBottom: '1px solid var(--border-color)',
   },
   title: {
     display: 'flex',
     alignItems: 'center',
     fontWeight: 600,
     fontSize: '14px',
-    color: '#F3F4F6',
+    color: 'var(--color-text-primary)',
   },
   closeBtn: {
     background: 'none',

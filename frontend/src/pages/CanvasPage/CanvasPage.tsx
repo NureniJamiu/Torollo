@@ -3,6 +3,9 @@ import { ReactFlow, Background, Controls, BackgroundVariant } from '@xyflow/reac
 import type { Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import UbuntuNode from '../../features/nodes/UbuntuNode/UbuntuNode';
+import InputModal from '../../shared/components/InputModal';
+import ConfirmModal from '../../shared/components/ConfirmModal';
+import { ToastNotification, useToast } from '../../shared/components/Toast';
 import { Plus, Server, RefreshCw, Save, ArrowLeft } from 'lucide-react';
 
 interface ContainerData {
@@ -24,6 +27,11 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   
+  // Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const { toast, showToast, dismissToast } = useToast();
+
   // Track visual node coordinates manually, saved to localStorage
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -60,29 +68,28 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
   const saveGraphLocally = () => {
     localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positions));
-    alert('System architecture graph layout saved locally!');
+    showToast('Graph layout saved successfully');
   };
 
-  const handleCreateNode = async () => {
-    const nodeName = prompt('Enter a name for your Ubuntu node:', `node-${containers.length + 1}`);
-    if (!nodeName) return;
-
+  const handleCreateNode = async (nodeName: string) => {
     try {
       setCreating(true);
+      setShowCreateModal(false);
       const res = await fetch(`http://localhost:5000/api/projects/${projectId}/containers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nodeName })
       });
       if (res.ok) {
+        showToast(`Node "${nodeName}" created successfully`);
         fetchContainers();
       } else {
         const error = await res.json();
-        alert(`Failed: ${error.error}`);
+        showToast(`Failed: ${error.error}`);
       }
     } catch (err) {
       console.error(err);
-      alert('Error creating container node.');
+      showToast('Error creating container node');
     } finally {
       setCreating(false);
     }
@@ -106,8 +113,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this container?')) return;
+  const handleDeleteConfirmed = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget;
+    setDeleteTarget(null);
     try {
       const res = await fetch(`http://localhost:5000/api/projects/${projectId}/containers/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -118,6 +127,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(updated));
           return updated;
         });
+        showToast('Container deleted');
         fetchContainers();
       }
     } catch (err) {
@@ -158,7 +168,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         status: c.status,
         onStart: handleStart,
         onStop: handleStop,
-        onDelete: handleDelete,
+        onDelete: (id: string) => setDeleteTarget(id),
         onTerminalOpen: onTerminalOpen,
       },
     };
@@ -174,7 +184,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           <button onClick={onBackToProjects} style={styles.backBtn} title="Back to Projects">
             <ArrowLeft size={16} />
           </button>
-          <Server size={22} color="#3B82F6" style={{ marginLeft: 8 }} />
+          <Server size={22} color="var(--color-accent)" style={{ marginLeft: 8 }} />
           <span style={styles.brandTitle}>{projectName}</span>
           <span style={styles.badge}>Phase 1</span>
         </div>
@@ -199,7 +209,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           </button>
 
           <button 
-            onClick={handleCreateNode} 
+            onClick={() => setShowCreateModal(true)} 
             style={styles.addBtn}
             disabled={creating}
           >
@@ -218,7 +228,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           onNodeDragStop={onNodeDragStop}
           fitView
         >
-          <Background variant={BackgroundVariant.Lines} color="#E5E7EB" gap={20} size={1} />
+          <Background variant={BackgroundVariant.Dots} color="#C0C0C0" gap={24} size={1.5} />
           <Controls />
         </ReactFlow>
       </div>
@@ -227,13 +237,41 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       <div style={styles.footer} className="glass">
         <div style={styles.statusSummary}>
           <span>Active: <strong>{containers.filter(c => c.state === 'running').length}</strong></span>
-          <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.15)' }}>|</span>
+          <span style={styles.divider}>|</span>
           <span>Stopped: <strong>{containers.filter(c => c.state !== 'running').length}</strong></span>
         </div>
         <div style={styles.footerNote}>
           Local-first Docker runtime powered by Node.js & Dockerode
         </div>
       </div>
+
+      {/* Modals */}
+      {showCreateModal && (
+        <InputModal
+          title="Create Ubuntu Node"
+          label="Give your new container a descriptive name."
+          placeholder="e.g. web-server, api-gateway"
+          defaultValue={`node-${containers.length + 1}`}
+          submitText="Create Node"
+          onSubmit={handleCreateNode}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete Container"
+          message="This will permanently stop and remove this container. This action cannot be undone."
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {toast && (
+        <ToastNotification message={toast} onDismiss={dismissToast} />
+      )}
     </div>
   );
 }
@@ -252,7 +290,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     padding: '12px 24px',
     zIndex: 10,
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+    borderBottom: '1px solid var(--border-color)',
   },
   brand: {
     display: 'flex',
@@ -260,13 +298,13 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '10px',
   },
   backBtn: {
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '6px',
-    color: '#9CA3AF',
+    background: 'rgba(0, 0, 0, 0.04)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '8px',
+    color: 'var(--color-text-secondary)',
     cursor: 'pointer',
-    width: '28px',
-    height: '28px',
+    width: '32px',
+    height: '32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -276,27 +314,27 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: '18px',
     letterSpacing: '-0.5px',
-    color: '#FFF',
+    color: 'var(--color-text-primary)',
   },
   badge: {
     fontSize: '11px',
     fontWeight: 600,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    color: '#3B82F6',
-    padding: '2px 8px',
+    backgroundColor: 'var(--color-accent-glow)',
+    color: 'var(--color-accent)',
+    padding: '2px 10px',
     borderRadius: '12px',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
+    border: '1px solid rgba(37, 99, 235, 0.2)',
   },
   actions: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
   },
   refreshBtn: {
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '8px',
-    color: '#9CA3AF',
+    background: 'rgba(0, 0, 0, 0.04)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '10px',
+    color: 'var(--color-text-secondary)',
     cursor: 'pointer',
     width: '38px',
     height: '38px',
@@ -306,32 +344,35 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s',
   },
   saveBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    color: '#FFF',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '8px',
+    backgroundColor: 'var(--bg-surface-solid)',
+    color: 'var(--color-text-primary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '10px',
     padding: '0 16px',
     height: '38px',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 600,
+    fontFamily: 'var(--font-sans)',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    transition: 'background-color 0.2s',
+    transition: 'all 0.2s',
   },
   addBtn: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: 'var(--color-accent)',
     color: '#FFF',
     border: 'none',
-    borderRadius: '8px',
-    padding: '0 16px',
+    borderRadius: '10px',
+    padding: '0 18px',
     height: '38px',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 600,
+    fontFamily: 'var(--font-sans)',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     transition: 'background-color 0.2s, transform 0.1s',
+    boxShadow: '0 1px 3px rgba(37, 99, 235, 0.3)',
   },
   canvasContainer: {
     flex: 1,
@@ -341,18 +382,23 @@ const styles: Record<string, React.CSSProperties> = {
   footer: {
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '8px 24px',
+    padding: '10px 24px',
     fontSize: '12px',
-    color: '#9CA3AF',
-    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+    color: 'var(--color-text-secondary)',
+    borderTop: '1px solid var(--border-color)',
   },
   statusSummary: {
     display: 'flex',
     alignItems: 'center',
+    color: 'var(--color-text-secondary)',
+  },
+  divider: {
+    margin: '0 12px',
+    color: 'var(--border-color-hover)',
   },
   footerNote: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'var(--font-mono)',
     fontSize: '11px',
-    color: '#6B7280',
+    color: 'var(--color-text-muted)',
   },
 };
