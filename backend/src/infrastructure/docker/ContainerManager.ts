@@ -1,5 +1,4 @@
 import docker from './DockerClient';
-import { ImageManager } from './ImageManager';
 
 export interface ContainerInfo {
   id: string;
@@ -11,6 +10,42 @@ export interface ContainerInfo {
 
 export class ContainerManager {
   private static LAB_PREFIX = 'akal-lab-';
+  private static readonly UBUNTU_IMAGE_TAG = 'derssa/backend-lab-ubuntu:v1';
+
+  /**
+   * Ensures that the custom prebuilt Ubuntu image exists locally.
+   * If not, pulls it from Docker Hub and logs progress layer-by-layer.
+   */
+  private static async ensureUbuntuImage(): Promise<void> {
+    const images = await docker.listImages();
+    const hasImage = images.some(img =>
+      img.RepoTags && img.RepoTags.includes(this.UBUNTU_IMAGE_TAG)
+    );
+
+    if (!hasImage) {
+      console.log('Pulling Ubuntu image (first time only)...');
+      await new Promise<void>((resolve, reject) => {
+        docker.pull(this.UBUNTU_IMAGE_TAG, {}, (err, stream) => {
+          if (err) return reject(err);
+          if (!stream) return reject(new Error('Pull stream is undefined'));
+
+          docker.modem.followProgress(
+            stream,
+            (errFinished) => {
+              if (errFinished) return reject(errFinished);
+              resolve();
+            },
+            (event) => {
+              if (event.status) {
+                const progress = event.progress ? ` ${event.progress}` : '';
+                console.log(`[Docker Hub Pull] ${event.status}${progress}`);
+              }
+            }
+          );
+        });
+      });
+    }
+  }
 
   public static async listContainersByProject(projectId: string): Promise<ContainerInfo[]> {
     const containers = await docker.listContainers({ all: true });
@@ -26,13 +61,14 @@ export class ContainerManager {
   }
 
   public static async createContainer(projectId: string, nodeName: string): Promise<ContainerInfo> {
-    // Automatically ensure custom image exists (builds it if missing)
-    await ImageManager.ensureUbuntuImageExists();
+    // Automatically ensure prebuilt image is pulled
+    await this.ensureUbuntuImage();
     
+    console.log('Creating container...');
     const safeName = `${this.LAB_PREFIX}${projectId}-${nodeName.replace(/[^a-zA-Z0-9-_]/g, '')}`;
 
     const container = await docker.createContainer({
-      Image: ImageManager.UBUNTU_IMAGE_TAG,
+      Image: this.UBUNTU_IMAGE_TAG,
       name: safeName,
       Cmd: ['/bin/bash'],
       Tty: true,
@@ -46,12 +82,15 @@ export class ContainerManager {
       }
     });
 
+    console.log('Starting container...');
     await container.start();
+
+    console.log('Ubuntu node ready');
 
     return {
       id: container.id,
       name: nodeName,
-      image: ImageManager.UBUNTU_IMAGE_TAG,
+      image: this.UBUNTU_IMAGE_TAG,
       state: 'running',
       status: 'Up less than a second'
     };
