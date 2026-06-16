@@ -1,4 +1,5 @@
 import docker from './DockerClient';
+import { ImageManager } from './ImageManager';
 
 export interface ContainerInfo {
   id: string;
@@ -10,20 +11,6 @@ export interface ContainerInfo {
 
 export class ContainerManager {
   private static LAB_PREFIX = 'akal-lab-';
-
-  private static async ensureUbuntuImage(): Promise<void> {
-    const images = await docker.listImages();
-    const hasUbuntu = images.some(img =>
-      img.RepoTags && img.RepoTags.some(tag => tag.startsWith('akal-ubuntu:latest'))
-    );
-
-    if (!hasUbuntu) {
-      console.error('Custom image "akal-ubuntu:latest" not found locally.');
-      console.info('Please run the following build command first:');
-      console.info('docker build -t akal-ubuntu:latest -f backend/docker/ubuntu-node/Dockerfile backend/docker/ubuntu-node');
-      throw new Error('Required Docker image "akal-ubuntu:latest" not found. Run "docker build -t akal-ubuntu:latest -f backend/docker/ubuntu-node/Dockerfile backend/docker/ubuntu-node" first.');
-    }
-  }
 
   public static async listContainersByProject(projectId: string): Promise<ContainerInfo[]> {
     const containers = await docker.listContainers({ all: true });
@@ -39,11 +26,13 @@ export class ContainerManager {
   }
 
   public static async createContainer(projectId: string, nodeName: string): Promise<ContainerInfo> {
-    await this.ensureUbuntuImage();
+    // Automatically ensure custom image exists (builds it if missing)
+    await ImageManager.ensureUbuntuImageExists();
+    
     const safeName = `${this.LAB_PREFIX}${projectId}-${nodeName.replace(/[^a-zA-Z0-9-_]/g, '')}`;
 
     const container = await docker.createContainer({
-      Image: 'akal-ubuntu:latest',
+      Image: ImageManager.UBUNTU_IMAGE_TAG,
       name: safeName,
       Cmd: ['/bin/bash'],
       Tty: true,
@@ -62,7 +51,7 @@ export class ContainerManager {
     return {
       id: container.id,
       name: nodeName,
-      image: 'akal-ubuntu:latest',
+      image: ImageManager.UBUNTU_IMAGE_TAG,
       state: 'running',
       status: 'Up less than a second'
     };
