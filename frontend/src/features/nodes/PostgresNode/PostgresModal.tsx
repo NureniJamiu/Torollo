@@ -180,6 +180,9 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
       }
     } catch (err: any) {
       setQueryOutput(localConsoleOutput + `Execution failed: ${err.message}`);
+    } finally {
+      setExecuting(false);
+    }
   };
 
   const handleViewTableData = async (database: string, tableName: string) => {
