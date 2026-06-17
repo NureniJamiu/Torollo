@@ -57,16 +57,16 @@ function autoGrowContainers(
   containers: any[],
   positions: Record<string, { x: number; y: number }>
 ): NetworkConfig {
-  const defaultSubnetWidth = 280;
-  const defaultSubnetHeight = 220;
+  const defaultSubnetWidth = 300;
+  const defaultSubnetHeight = 240;
 
   const nodeWidth = 220;
   const nodeHeight = 140;
   const gapX = 60;
   const gapY = 50;
-  const paddingLeft = 30;
-  const paddingRight = 30;
-  const paddingTop = 50;
+  const paddingLeft = 40;
+  const paddingRight = 40;
+  const paddingTop = 60;
   const paddingBottom = 40;
   const numColumns = 2;
 
@@ -481,8 +481,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             const nodeHeight = 140;
             const gapX = 60;
             const gapY = 50;
-            const paddingLeft = 30;
-            const paddingTop = 50;
+            const paddingLeft = 40;
+            const paddingTop = 60;
             const numColumns = 2;
 
             const col = indexInSubnet % numColumns;
