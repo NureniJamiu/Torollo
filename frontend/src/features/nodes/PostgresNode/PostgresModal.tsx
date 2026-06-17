@@ -126,10 +126,6 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
       if (res.ok) {
         const data = await res.json();
         setExplorerData(data);
-        // Default selectedDb to first datname if currently default postgres
-        if (data.length > 0 && selectedDb === 'postgres') {
-          setSelectedDb(data[0].database);
-        }
       }
     } catch (err) {
       console.error(err);
