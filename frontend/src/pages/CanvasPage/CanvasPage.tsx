@@ -24,6 +24,7 @@ import SecurityGroupsModal from '../../features/nodes/SecurityGroups/SecurityGro
 import type { SecurityGroupRule } from '../../features/nodes/SecurityGroups/SecurityGroupsModal';
 import VpcModal from '../../features/nodes/VpcNode/VpcModal';
 import type { VPCConfig } from '../../features/nodes/VpcNode/VpcModal';
+import ButtonEdge from './components/ButtonEdge';
 import { validateArchitecture } from '../../shared/utils/architectureValidator';
 
 interface CanvasPageProps {
@@ -163,6 +164,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     subnet: SubnetNode
   }), []);
 
+  const edgeTypes = useMemo(() => ({
+    buttonEdge: ButtonEdge
+  }), []);
+
   // Save/load network config helper
   const saveNetworkConfig = useCallback((newConfig: NetworkConfig) => {
     const grownConfig = autoGrowContainers(newConfig, containers, positionsRef.current);
@@ -218,6 +223,23 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     triggerArchitectureAudit(newConfig);
   }, [networkConfig, saveNetworkConfig, showToast, triggerArchitectureAudit]);
 
+  const handleDeleteEdge = useCallback((edgeId: string) => {
+    const match = edgeId.match(/^edge-([^-]+)-([^-]+)-(.+)$/);
+    if (!match) return;
+    const [, sourceId, targetId, port] = match;
+
+    const updatedSecurityGroups = { ...networkConfig.nodeSecurityGroups };
+    if (updatedSecurityGroups[targetId]) {
+      updatedSecurityGroups[targetId] = updatedSecurityGroups[targetId].filter(rule => {
+        return !(rule.type === 'inbound' && rule.action === 'ALLOW' && rule.port === port && (rule.source === sourceId || rule.source === '0.0.0.0/0'));
+      });
+      const newConfig = { ...networkConfig, nodeSecurityGroups: updatedSecurityGroups };
+      saveNetworkConfig(newConfig);
+      showToast("Firewall connection removed");
+      triggerArchitectureAudit(newConfig);
+    }
+  }, [networkConfig, saveNetworkConfig, showToast, triggerArchitectureAudit]);
+
   // Dynamic Edges builder representing firewall rules
   const edges = useMemo(() => {
     const edgesList: Edge[] = [];
@@ -261,6 +283,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
                 id: edgeId,
                 source: srcNode.id,
                 target: destNode.id,
+                type: 'buttonEdge',
+                data: { onDelete: handleDeleteEdge },
                 animated: true,
                 label: `Port ${rule.port}`,
                 style: { stroke: '#10B981', strokeWidth: 2 },
@@ -273,7 +297,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     });
     
     return edgesList;
-  }, [containers, networkConfig]);
+  }, [containers, networkConfig, handleDeleteEdge]);
 
   // Handle manual connection line draws (automatically updates security group)
   const onConnect = useCallback((connection: any) => {
@@ -993,6 +1017,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onNodeDragStart={onNodeDragStart}
             onNodeDrag={onNodeDrag}
