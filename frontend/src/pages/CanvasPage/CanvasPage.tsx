@@ -113,10 +113,11 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     });
   }, [containers, startContainer, stopContainer, onTerminalOpen, setNodes]);
 
-  // Save position to ref when drag ends
+  // Save position to ref and localStorage when drag ends (auto-save)
   const onNodeDragStop = useCallback((_event: any, node: Node) => {
     positionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
-  }, []);
+    localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positionsRef.current));
+  }, [projectId]);
 
   const saveGraphLocally = () => {
     const currentPositions: Record<string, { x: number; y: number }> = {};
