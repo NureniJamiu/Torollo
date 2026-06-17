@@ -32,7 +32,7 @@ export default function NodeLibrary({ onCollapseChange }: NodeLibraryProps) {
           </div>
         )}
         <button onClick={toggleCollapse} style={styles.collapseBtn} title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {isCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
       </div>
 
@@ -103,7 +103,7 @@ export default function NodeLibrary({ onCollapseChange }: NodeLibraryProps) {
 const styles: Record<string, React.CSSProperties> = {
   sidebar: {
     backgroundColor: 'var(--bg-surface-solid)',
-    borderRight: '1px solid var(--border-color)',
+    borderLeft: '1px solid var(--border-color)',
     display: 'flex',
     flexDirection: 'column',
     height: '100%',

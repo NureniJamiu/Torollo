@@ -196,8 +196,6 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       />
 
       <div style={styles.bodyWrapper}>
-        <NodeLibrary />
-
         {/* Main React Flow Workspace */}
         <div 
           style={styles.canvasContainer}
@@ -217,6 +215,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             <Controls />
           </ReactFlow>
         </div>
+
+        <NodeLibrary />
       </div>
 
       <CanvasFooter containers={containers} />
