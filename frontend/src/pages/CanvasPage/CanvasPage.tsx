@@ -355,7 +355,6 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           id: subnet.id,
           type: 'subnet',
           parentId: subnet.vpcId || undefined,
-          extent: subnet.vpcId ? 'parent' as const : undefined,
           position: subnet.position,
           style: { width: subnet.width, height: subnet.height },
           data: {
@@ -392,7 +391,6 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           id: c.id,
           type: nodeType,
           parentId,
-          extent: parentId ? 'parent' as const : undefined,
           position,
           data: {
             id: c.id,
