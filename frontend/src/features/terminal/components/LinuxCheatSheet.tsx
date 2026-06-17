@@ -112,7 +112,7 @@ const styles: Record<string, React.CSSProperties> = {
   categoryBtn: {
     border: 'none',
     padding: '6px 12px',
-    borderRadius: '6px',
+    borderRadius: '0px',
     fontSize: '12px',
     fontWeight: 500,
     cursor: 'pointer',

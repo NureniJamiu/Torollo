@@ -102,12 +102,12 @@ export default function TerminalModal({ containerId, nodeName, onClose }: Termin
           </button>
         </div>
 
-        <div 
-          ref={terminalRef} 
+        <div
+          ref={terminalRef}
           style={{
             ...styles.terminalContainer,
             display: activeTab === 'terminal' ? 'block' : 'none',
-          }} 
+          }}
         />
 
         {activeTab === 'cheatsheet' && (
@@ -152,7 +152,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     padding: '8px 16px 0 16px',
     borderBottom: '1px solid var(--border-color)',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: '12px',
+    borderTopRightRadius: '12px',
   },
   tabs: {
     display: 'flex',
@@ -161,7 +163,8 @@ const styles: Record<string, React.CSSProperties> = {
   tabBtn: {
     background: 'none',
     border: 'none',
-    borderBottom: '2px solid transparent',
+    borderTopLeftRadius: '6px',
+    borderTopRightRadius: '6px',
     color: 'var(--color-text-secondary)',
     cursor: 'pointer',
     padding: '8px 16px',
@@ -173,7 +176,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   activeTabBtn: {
     color: '#3B82F6',
-    borderBottomColor: '#3B82F6',
+    backgroundColor: 'var(--bg-main)',
     fontWeight: 600,
   },
   closeBtn: {
