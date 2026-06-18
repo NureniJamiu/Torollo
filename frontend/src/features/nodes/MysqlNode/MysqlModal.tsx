@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Database, Table, Columns, Play, Copy, Check, Search, BookOpen, Terminal, RefreshCw, AlertCircle, Eye } from 'lucide-react';
+import { X, Database, Table, Columns, Play, Copy, Check, Search, BookOpen, Terminal, RefreshCw, AlertCircle, Eye, Loader2 } from 'lucide-react';
 import { API_BASE } from '../../../shared/types';
 import mysqlCheatSheet from './data/mysqlCheatSheet.json';
 
@@ -64,7 +64,15 @@ export default function MysqlModal({ containerId, nodeName, projectId, onClose }
         }
       } else {
         const errData = await res.json();
-        setExplorerError(errData.error || 'Failed to inspect schema');
+        if (errData.error && errData.error.includes('starting up')) {
+          setExplorerError('starting_up');
+          // Auto retry in 2.5 seconds
+          setTimeout(() => {
+            fetchExplorerData();
+          }, 2500);
+        } else {
+          setExplorerError(errData.error || 'Failed to inspect schema');
+        }
       }
     } catch (err: any) {
       setExplorerError(err.message || 'Failed to connect to container');
@@ -219,21 +227,32 @@ export default function MysqlModal({ containerId, nodeName, projectId, onClose }
 
               <div style={styles.explorerTree}>
                 {explorerError ? (
-                  <div style={styles.errorContainer}>
-                    <AlertCircle size={24} color="#EF4444" style={{ marginBottom: 12 }} />
-                    <span style={styles.errorMessage}>{explorerError}</span>
-                    <button onClick={fetchExplorerData} style={styles.retryBtn}>
-                      <RefreshCw size={12} style={{ marginRight: 6 }} />
-                      Retry Schema Scan
-                    </button>
-                  </div>
+                  explorerError === 'starting_up' ? (
+                    <div style={styles.errorContainer}>
+                      <Loader2 size={24} className="spin" color="#F29111" style={{ marginBottom: 12 }} />
+                      <span style={styles.errorMessage}>Database server is initializing... This may take a few seconds.</span>
+                    </div>
+                  ) : (
+                    <div style={styles.errorContainer}>
+                      <AlertCircle size={24} color="#EF4444" style={{ marginBottom: 12 }} />
+                      <span style={styles.errorMessage}>{explorerError}</span>
+                      <button onClick={fetchExplorerData} style={styles.retryBtn}>
+                        <RefreshCw size={12} style={{ marginRight: 6 }} />
+                        Retry Schema Scan
+                      </button>
+                    </div>
+                  )
                 ) : explorerData.length > 0 ? (
                   explorerData.map(node => (
                     <div key={node.database} style={styles.treeNode}>
                       <div style={styles.treeRow} onClick={() => toggleDBExpand(node.database)}>
                         <Database size={16} color="#F29111" style={{ marginRight: 8 }} />
                         <span style={styles.dbName}>{node.database}</span>
-                        {node.error && <AlertCircle size={14} color="#EF4444" style={{ marginLeft: 8 }} title="Database offline/unreachable" />}
+                        {node.error && (
+                           <span title="Database offline/unreachable">
+                             <AlertCircle size={14} color="#EF4444" style={{ marginLeft: 8 }} />
+                           </span>
+                         )}
                       </div>
 
                       {expandedDBs[node.database] && (
@@ -421,7 +440,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
   },
   tabBtn: {
-    background: 'none',
+    backgroundColor: 'transparent',
     border: 'none',
     borderRadius: '6px',
     color: 'var(--color-text-secondary)',
