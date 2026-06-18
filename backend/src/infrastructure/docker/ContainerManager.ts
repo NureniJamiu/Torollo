@@ -13,8 +13,8 @@ export interface ContainerInfo {
 export class ContainerManager {
   private static LAB_PREFIX = 'akal-lab-';
   private static readonly UBUNTU_IMAGE_TAG = 'derssa/backend-lab-ubuntu:v1';
-  private static readonly POSTGRES_IMAGE_TAG = 'postgres:15-alpine';
-  private static readonly MYSQL_IMAGE_TAG = 'mysql:8.0';
+  private static readonly POSTGRES_IMAGE_TAG = 'derssa/backend-lab-postgres:v1';
+  private static readonly MYSQL_IMAGE_TAG = 'derssa/backend-lab-mysql:v1';
 
   /**
    * Ensures that the custom prebuilt Ubuntu image exists locally.
@@ -61,26 +61,39 @@ export class ContainerManager {
 
     if (!hasImage) {
       console.log('Pulling Postgres image (first time only)...');
-      await new Promise<void>((resolve, reject) => {
-        docker.pull(this.POSTGRES_IMAGE_TAG, {}, (err, stream) => {
-          if (err) return reject(err);
-          if (!stream) return reject(new Error('Pull stream is undefined'));
+      try {
+        await new Promise<void>((resolve, reject) => {
+          docker.pull(this.POSTGRES_IMAGE_TAG, {}, (err, stream) => {
+            if (err) return reject(err);
+            if (!stream) return reject(new Error('Pull stream is undefined'));
 
-          docker.modem.followProgress(
-            stream,
-            (errFinished) => {
-              if (errFinished) return reject(errFinished);
-              resolve();
-            },
-            (event) => {
-              if (event.status) {
-                const progress = event.progress ? ` ${event.progress}` : '';
-                console.log(`[Docker Hub Pull - Postgres] ${event.status}${progress}`);
+            docker.modem.followProgress(
+              stream,
+              (errFinished) => {
+                if (errFinished) return reject(errFinished);
+                resolve();
+              },
+              (event) => {
+                if (event.status) {
+                  const progress = event.progress ? ` ${event.progress}` : '';
+                  console.log(`[Docker Hub Pull - Postgres] ${event.status}${progress}`);
+                }
               }
-            }
-          );
+            );
+          });
         });
-      });
+      } catch (pullErr) {
+        console.warn(`[ContainerManager] Failed to pull ${this.POSTGRES_IMAGE_TAG}. Trying fallback...`);
+        const fallbackTag = 'postgres:15-alpine';
+        const flatTags = images.flatMap(img => img.RepoTags || []);
+        if (flatTags.includes(fallbackTag)) {
+          console.log(`[ContainerManager] Tagging local ${fallbackTag} as ${this.POSTGRES_IMAGE_TAG}...`);
+          const img = docker.getImage(fallbackTag);
+          await img.tag({ repo: 'derssa/backend-lab-postgres', tag: 'v1' });
+        } else {
+          throw pullErr;
+        }
+      }
     }
   }
 
@@ -170,17 +183,29 @@ export class ContainerManager {
         'akal.node.type': type
       },
       HostConfig: {
-        AutoRemove: false
+        AutoRemove: false,
+        NetworkMode: 'akal-lab-network',
+        CapAdd: ['NET_ADMIN']
+      },
+      NetworkingConfig: {
+        EndpointsConfig: {
+          'akal-lab-network': {
+            Aliases: [nodeName]
+          }
+        }
       }
     };
 
     if (isPostgres) {
       createOpts.Env = ['POSTGRES_PASSWORD=postgres'];
+      createOpts.Entrypoint = ['docker-entrypoint.sh'];
+      createOpts.Cmd = ['postgres', '-c', 'fsync=off', '-c', 'synchronous_commit=off', '-c', 'full_page_writes=off'];
       createOpts.HostConfig.PortBindings = {
         '5432/tcp': [{ HostPort: '' }]
       };
     } else if (isMysql) {
       createOpts.Env = ['MYSQL_ROOT_PASSWORD=mysql'];
+      createOpts.Cmd = ['mysqld', '--innodb-flush-log-at-trx-commit=2', '--innodb-doublewrite=0', '--skip-innodb-doublewrite'];
       createOpts.HostConfig.PortBindings = {
         '3306/tcp': [{ HostPort: '' }]
       };
@@ -244,7 +269,11 @@ export class ContainerManager {
       });
 
       stream.on('end', () => {
-        resolve(output.trim());
+        let cleanOutput = output.trim();
+        if (cleanOutput.includes("connection to server on socket") || cleanOutput.includes("Is the server running locally")) {
+          cleanOutput = "ERROR: Database server is still starting up. Please wait 5-10 seconds for initialization to complete and try again.";
+        }
+        resolve(cleanOutput);
       });
 
       stream.on('error', (err) => {
@@ -257,8 +286,7 @@ export class ContainerManager {
     const container = docker.getContainer(containerId);
     
     const exec = await container.exec({
-      Cmd: ['mysql', '-u', 'root', '-D', database, ...extraArgs, '-e', sqlQuery],
-      Env: ['MYSQL_PWD=mysql'],
+      Cmd: ['mysql', '-u', 'root', '-pmysql', '-D', database, ...extraArgs, '-e', sqlQuery],
       AttachStdout: true,
       AttachStderr: true
     });
@@ -282,7 +310,11 @@ export class ContainerManager {
         const warningText = 'mysql: [Warning] Using a password on the command line interface can be insecure.';
         let cleanOutput = output.replace(warningText, '').trim();
         
-        if (cleanOutput.includes("Can't connect to local MySQL server through socket") || cleanOutput.includes("ERROR 2002 (HY000)")) {
+        if (
+          cleanOutput.includes("Can't connect to local MySQL server through socket") || 
+          cleanOutput.includes("ERROR 2002 (HY000)") ||
+          cleanOutput.includes("ERROR 1045 (28000)")
+        ) {
           cleanOutput = "ERROR: Database server is still starting up. Please wait 5-10 seconds for initialization to complete and try again.";
         }
         resolve(cleanOutput);

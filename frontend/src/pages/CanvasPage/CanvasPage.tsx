@@ -26,6 +26,7 @@ import VpcModal from '../../features/nodes/VpcNode/VpcModal';
 import type { VPCConfig } from '../../features/nodes/VpcNode/VpcModal';
 import ButtonEdge from './components/ButtonEdge';
 import { validateArchitecture } from '../../shared/utils/architectureValidator';
+import { API_BASE } from '../../shared/types';
 
 interface CanvasPageProps {
   projectId: string;
@@ -42,6 +43,8 @@ interface Subnet {
   position: { x: number; y: number };
   width: number;
   height: number;
+  columns?: number;
+  rows?: number;
   routes: Array<{ destination: string; target: string; description: string }>;
 }
 
@@ -54,40 +57,16 @@ interface NetworkConfig {
 
 function autoGrowContainers(
   config: NetworkConfig,
-  containers: any[],
-  positions: Record<string, { x: number; y: number }>
+  _containers: any[],
+  _positions: Record<string, { x: number; y: number }>
 ): NetworkConfig {
-  const defaultSubnetWidth = 260;
-  const defaultSubnetHeight = 180;
-
-  const paddingRight = 40;
-  const paddingBottom = 80;
-
-  // 1. Grow Subnets based on nested services
   const updatedSubnets = config.subnets.map(subnet => {
-    const subnetNodes = containers.filter(c => config.nodeSubnetMap[c.id] === subnet.id);
-    if (subnetNodes.length === 0) {
-      return { ...subnet, width: defaultSubnetWidth, height: defaultSubnetHeight };
-    }
-
-    let maxRight = defaultSubnetWidth - paddingRight;
-    let maxBottom = defaultSubnetHeight - paddingBottom;
-
-    subnetNodes.forEach(node => {
-      const pos = positions[node.id];
-      if (pos) {
-        // Node size is roughly 220x140
-        const right = pos.x + 220;
-        const bottom = pos.y + 140;
-        if (right > maxRight) maxRight = right;
-        if (bottom > maxBottom) maxBottom = bottom;
-      }
-    });
-
+    const cols = subnet.columns || 2;
+    const rows = subnet.rows || 1;
     return {
       ...subnet,
-      width: Math.max(defaultSubnetWidth, maxRight + paddingRight),
-      height: Math.max(defaultSubnetHeight, maxBottom + paddingBottom)
+      width: cols * 340,
+      height: 70 + rows * 190
     };
   });
 
@@ -120,7 +99,6 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   // Phase 3 Modal states
   const [inspectingSubnet, setInspectingSubnet] = useState<{ id: string; name: string } | null>(null);
   const [inspectingSecurityGroup, setInspectingSecurityGroup] = useState<{ id: string; name: string; type: string } | null>(null);
-  const [inspectingVpc, setInspectingVpc] = useState<{ id: string; name: string } | null>(null);
 
   // Drag and drop tracking
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -131,6 +109,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number; parentId?: string }>>({});
   const prevDbCountRef = useRef(0);
   const hasShownCacheWarningRef = useRef(false);
+  const draggingNodeIdRef = useRef<string | null>(null);
 
   // React Flow managed nodes state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -155,6 +134,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   });
 
   const [showVpcSettings, setShowVpcSettings] = useState(false);
+  const [showTrafficSimulator, setShowTrafficSimulator] = useState(false);
 
   const nodeTypes = useMemo(() => ({ 
     ubuntu: UbuntuNode,
@@ -173,6 +153,17 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     const grownConfig = autoGrowContainers(newConfig, containers, positionsRef.current);
     setNetworkConfig(grownConfig);
     localStorage.setItem(`akal-lab-network-config-${projectId}`, JSON.stringify(grownConfig));
+
+    // Sync to backend to trigger runtime enforcement
+    fetch(`${API_BASE}/api/projects/${projectId}/network-config`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ networkConfig: grownConfig })
+    }).catch(err => {
+      console.error('Failed to sync network configuration to backend:', err);
+    });
   }, [projectId, containers]);
 
   const triggerArchitectureAudit = useCallback((configToValidate: NetworkConfig) => {
@@ -222,6 +213,60 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     showToast("Subnet deleted successfully");
     triggerArchitectureAudit(newConfig);
   }, [networkConfig, saveNetworkConfig, showToast, triggerArchitectureAudit]);
+
+  const handleSubnetResize = useCallback((subnetId: string, dimension: 'columns' | 'rows', newValue: number) => {
+    if (dimension === 'columns' && newValue < 2) return;
+    if (dimension === 'rows' && newValue < 1) return;
+
+    const subnet = networkConfig.subnets.find(s => s.id === subnetId);
+    if (!subnet) return;
+
+    const currentCols = subnet.columns || 2;
+    const currentRows = subnet.rows || 1;
+
+    let targetCols = currentCols;
+    let targetRows = currentRows;
+    if (dimension === 'columns') targetCols = newValue;
+    if (dimension === 'rows') targetRows = newValue;
+
+    // Verify if any node inside this subnet lies outside the new boundaries
+    if (targetCols < currentCols || targetRows < currentRows) {
+      const subnetNodes = containers.filter(c => networkConfig.nodeSubnetMap[c.id] === subnetId);
+      for (const node of subnetNodes) {
+        const pos = positionsRef.current[node.id];
+        if (pos) {
+          const col = Math.round((pos.x - 60) / 340);
+          const row = Math.round((pos.y - 60) / 190);
+          if (col >= targetCols || row >= targetRows) {
+            showNotification({
+              type: 'error',
+              message: `Cannot shrink grid. You should remove the node with name '${node.name}' to be able to reduce the size`
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    const updatedSubnets = networkConfig.subnets.map(s => {
+      if (s.id === subnetId) {
+        const cols = dimension === 'columns' ? newValue : (s.columns || 2);
+        const rows = dimension === 'rows' ? newValue : (s.rows || 1);
+        return {
+          ...s,
+          columns: cols,
+          rows: rows,
+          width: cols * 340,
+          height: 70 + rows * 190
+        };
+      }
+      return s;
+    });
+
+    const newConfig = { ...networkConfig, subnets: updatedSubnets };
+    saveNetworkConfig(newConfig);
+    triggerArchitectureAudit(newConfig);
+  }, [networkConfig, containers, saveNetworkConfig, triggerArchitectureAudit, showNotification]);
 
   const handleDeleteEdge = useCallback((edgeId: string) => {
     const match = edgeId.match(/^edge-([^-]+)-([^-]+)-(.+)$/);
@@ -315,13 +360,14 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       id: `rule-${Math.random().toString(36).substr(2, 9)}`,
       type: 'inbound',
       action: 'ALLOW',
+      protocol: 'TCP',
       port: defaultPort,
       source: source
     };
 
     const updatedSecurityGroups = {
       ...networkConfig.nodeSecurityGroups,
-      [target]: [...currentRules, newRule]
+      [target]: [newRule, ...currentRules]
     };
     const newConfig = { ...networkConfig, nodeSecurityGroups: updatedSecurityGroups };
     saveNetworkConfig(newConfig);
@@ -356,12 +402,21 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   }, [networkConfig, saveNetworkConfig, showToast, triggerArchitectureAudit]);
 
   // Helper to generate default security group rules for network nodes (deny all inbound by default)
-  const initDefaultRules = (nodeId: string, nodeType: string, subnetId: string) => {
+  const initDefaultRules = (_nodeId: string, _nodeType: string, _subnetId: string) => {
     return [
+      {
+        id: `rule-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'inbound' as const,
+        action: 'DENY' as const,
+        protocol: 'ALL' as const,
+        port: 'ALL',
+        source: '0.0.0.0/0'
+      },
       {
         id: `rule-${Math.random().toString(36).substr(2, 9)}`,
         type: 'outbound' as const,
         action: 'ALLOW' as const,
+        protocol: 'ALL' as const,
         port: 'ALL',
         source: '0.0.0.0/0'
       }
@@ -380,25 +435,45 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       }
     }
 
-    const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        if (!parsed.vpcConfig) {
-          parsed.vpcConfig = defaultVpcConfig;
+    // Fetch network config from backend, fallback to localStorage if unavailable
+    fetch(`${API_BASE}/api/projects/${projectId}/network-config`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.vpcConfig) {
+          setNetworkConfig(data);
+        } else {
+          const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
+          if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            if (!parsed.vpcConfig) {
+              parsed.vpcConfig = defaultVpcConfig;
+            }
+            setNetworkConfig(parsed);
+          } else {
+            setNetworkConfig({
+              vpcConfig: defaultVpcConfig,
+              subnets: [],
+              nodeSubnetMap: {},
+              nodeSecurityGroups: {}
+            });
+          }
         }
-        setNetworkConfig(parsed);
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      setNetworkConfig({
-        vpcConfig: defaultVpcConfig,
-        subnets: [],
-        nodeSubnetMap: {},
-        nodeSecurityGroups: {}
+      })
+      .catch(err => {
+        console.error('Failed to fetch network config from backend, using localStorage:', err);
+        const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
+        if (savedConfig) {
+          try {
+            const parsed = JSON.parse(savedConfig);
+            if (!parsed.vpcConfig) {
+              parsed.vpcConfig = defaultVpcConfig;
+            }
+            setNetworkConfig(parsed);
+          } catch (e) {
+            console.error(e);
+          }
+        }
       });
-    }
 
     const timer = setInterval(fetchContainers, 4000);
     return () => clearInterval(timer);
@@ -445,10 +520,15 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             id: subnet.id,
             name: subnet.name,
             type: subnet.type,
+            width: subnet.width,
+            height: subnet.height,
+            columns: subnet.columns || 2,
+            rows: subnet.rows || 1,
             onManageRoutes: (id: string, name: string) => {
               setInspectingSubnet({ id, name });
             },
-            onDelete: handleDeleteSubnet
+            onDelete: handleDeleteSubnet,
+            onResize: handleSubnetResize
           }
         };
       });
@@ -459,16 +539,71 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         const defaultX = 150 + (index % 3) * 280;
         const defaultY = 150 + Math.floor(index / 3) * 220;
         
-        const savedPos = positionsRef.current[c.id];
+        const savedPos = positionsRef.current[c.name];
         const dropPos = dropPositionsRef.current[c.name];
         if (dropPos) {
-          positionsRef.current[c.id] = dropPos;
+          positionsRef.current[c.name] = dropPos;
           delete dropPositionsRef.current[c.name];
         }
 
-        const position = dropPos || savedPos || existing?.position || { x: defaultX, y: defaultY };
-        const nodeType = c.type || 'ubuntu';
         const parentId = updatedNodeSubnetMap[c.id] || undefined;
+        const isDragging = draggingNodeIdRef.current === c.id;
+
+        let position = dropPos || savedPos || existing?.position || { x: defaultX, y: defaultY };
+
+        // Auto-layout grid for subnet children (if not currently dragging)
+        if (parentId && parentId.startsWith('subnet-') && !isDragging) {
+          const subnet = networkConfig.subnets.find(s => s.id === parentId);
+          const cols = subnet?.columns || 2;
+          const rows = subnet?.rows || 1;
+
+          const pos = positionsRef.current[c.name];
+          let col = -1;
+          let row = -1;
+          if (pos) {
+            col = Math.round((pos.x - 60) / 340);
+            row = Math.round((pos.y - 60) / 190);
+          }
+
+          const isOccupied = (colIdx: number, rowIdx: number, excludeId: string) => {
+            return containers.some(node => {
+              if (node.id === excludeId) return false;
+              if (updatedNodeSubnetMap[node.id] !== parentId) return false;
+              const nodePos = positionsRef.current[node.name];
+              if (!nodePos) return false;
+              const nCol = Math.round((nodePos.x - 60) / 340);
+              const nRow = Math.round((nodePos.y - 60) / 190);
+              return nCol === colIdx && nRow === rowIdx;
+            });
+          };
+
+          if (col < 0 || col >= cols || row < 0 || row >= rows) {
+            let found = false;
+            for (let r = 0; r < rows; r++) {
+              for (let cp = 0; cp < cols; cp++) {
+                if (!isOccupied(cp, r, c.id)) {
+                  col = cp;
+                  row = r;
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
+            if (!found) {
+              col = 0;
+              row = 0;
+            }
+          }
+
+          position = {
+            x: 60 + col * 340,
+            y: 60 + row * 190
+          };
+          positionsRef.current[c.name] = position;
+        }
+
+        const nodeType = c.type || 'ubuntu';
 
         return {
           ...existing,
@@ -502,7 +637,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
       return [...subnetNodes, ...containerNodes];
     });
-  }, [containers, startContainer, stopContainer, onTerminalOpen, setNodes, networkConfig, saveNetworkConfig, handleDeleteSubnet]);
+
+    // Save current positions (including auto-placed new nodes) to localStorage
+    localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positionsRef.current));
+  }, [containers, startContainer, stopContainer, onTerminalOpen, setNodes, networkConfig, saveNetworkConfig, handleDeleteSubnet, handleSubnetResize]);
 
   // Recursively calculate absolute coordinates of a node
   const getAbsoluteCoordinates = (nodeId: string, currentNodes: Node[]): { x: number; y: number } => {
@@ -518,6 +656,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
   // Track start position on drag start to allow rollback/reversion if drop is invalid
   const onNodeDragStart = useCallback((_event: any, node: Node) => {
+    draggingNodeIdRef.current = node.id;
     dragStartPositionsRef.current[node.id] = {
       x: node.position.x,
       y: node.position.y,
@@ -607,9 +746,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       }
     }
 
+    const key = (draggedNode.type === 'subnet' ? draggedNode.id : draggedNode.data?.name) as string;
     const currentPositions = {
       ...positionsRef.current,
-      [draggedNode.id]: tempPos
+      [key]: tempPos
     };
 
     const tempConfig = {
@@ -640,6 +780,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
   // Save position to ref and localStorage when drag ends (auto-save with overlapping logic)
   const onNodeDragStop = useCallback((_event: any, draggedNode: Node) => {
+    draggingNodeIdRef.current = null;
     if (!reactFlowInstance) return;
 
     const currentNodes = reactFlowInstance.getNodes();
@@ -722,10 +863,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     }
     else {
       // Container/Service node
-      const subnetWidth = 260;
-      const subnetHeight = 180;
-      const nodeCenterX = absX + 120;
-      const nodeCenterY = absY + 60;
+      const nodeCenterX = absX + 110;
+      const nodeCenterY = absY + 70;
 
       let targetSubnetId: string | null = null;
       let targetSubnetAbsPos = { x: 0, y: 0 };
@@ -736,9 +875,9 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
         if (
           nodeCenterX >= subnetAbsX &&
-          nodeCenterX <= subnetAbsX + subnetWidth &&
+          nodeCenterX <= subnetAbsX + subnet.width &&
           nodeCenterY >= subnetAbsY &&
-          nodeCenterY <= subnetAbsY + subnetHeight
+          nodeCenterY <= subnetAbsY + subnet.height
         ) {
           targetSubnetId = subnet.id;
           targetSubnetAbsPos = { x: subnetAbsX, y: subnetAbsY };
@@ -768,9 +907,21 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
       if (targetSubnetId) {
         updatedNodeSubnetMap[draggedNode.id] = targetSubnetId;
-        positionsRef.current[draggedNode.id] = {
-          x: absX - targetSubnetAbsPos.x,
-          y: absY - targetSubnetAbsPos.y
+        
+        const subnet = networkConfig.subnets.find(s => s.id === targetSubnetId);
+        const cols = subnet?.columns || 2;
+        const rows = subnet?.rows || 1;
+
+        const relX = absX - targetSubnetAbsPos.x;
+        const relY = absY - targetSubnetAbsPos.y;
+
+        const col = Math.max(0, Math.min(cols - 1, Math.round((relX - 60) / 340)));
+        const row = Math.max(0, Math.min(rows - 1, Math.round((relY - 60) / 190)));
+
+        const key = (draggedNode.type === 'subnet' ? draggedNode.id : draggedNode.data?.name) as string;
+        positionsRef.current[key] = {
+          x: 60 + col * 340,
+          y: 60 + row * 190
         };
 
         // Automatically setup default firewall connections when dragged into subnet
@@ -779,7 +930,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         }
       } else {
         delete updatedNodeSubnetMap[draggedNode.id];
-        positionsRef.current[draggedNode.id] = { x: absX, y: absY };
+        const key = (draggedNode.type === 'subnet' ? draggedNode.id : draggedNode.data?.name) as string;
+        positionsRef.current[key] = { x: absX, y: absY };
       }
 
       localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positionsRef.current));
@@ -896,8 +1048,10 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
       if (type === 'subnet-public' || type === 'subnet-private') {
         const isPublic = type === 'subnet-public';
-        const subnetWidth = 260;
-        const subnetHeight = 180;
+        const cols = 2;
+        const rows = 1;
+        const subnetWidth = cols * 340;
+        const subnetHeight = 70 + rows * 190;
         const subnetCenterX = position.x + subnetWidth / 2;
         const subnetCenterY = position.y + subnetHeight / 2;
 
@@ -930,6 +1084,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           position: position,
           width: subnetWidth,
           height: subnetHeight,
+          columns: cols,
+          rows: rows,
           routes: [
             { destination: '10.0.0.0/16', target: 'local', description: 'Local VPC routing' },
             ...(isPublic ? [{ destination: '0.0.0.0/0', target: 'igw', description: 'Internet access' }] : [])
@@ -943,10 +1099,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         saveNetworkConfig(newConfig);
         triggerArchitectureAudit(newConfig);
       } else {
-        const subnetWidth = 260;
-        const subnetHeight = 180;
-        const nodeCenterX = position.x + 120;
-        const nodeCenterY = position.y + 60;
+        const nodeCenterX = position.x + 110;
+        const nodeCenterY = position.y + 70;
 
         let targetSubnetId: string | null = null;
         let targetSubnetAbsPos = { x: 0, y: 0 };
@@ -957,9 +1111,9 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
 
           if (
             nodeCenterX >= subnetAbsX &&
-            nodeCenterX <= subnetAbsX + subnetWidth &&
+            nodeCenterX <= subnetAbsX + subnet.width &&
             nodeCenterY >= subnetAbsY &&
-            nodeCenterY <= subnetAbsY + subnetHeight
+            nodeCenterY <= subnetAbsY + subnet.height
           ) {
             targetSubnetId = subnet.id;
             targetSubnetAbsPos = { x: subnetAbsX, y: subnetAbsY };
@@ -967,9 +1121,23 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           }
         }
 
-        const finalDropPos = targetSubnetId
-          ? { x: position.x - targetSubnetAbsPos.x, y: position.y - targetSubnetAbsPos.y }
-          : position;
+        let finalDropPos = position;
+        if (targetSubnetId) {
+          const subnet = networkConfig.subnets.find(s => s.id === targetSubnetId);
+          const cols = subnet?.columns || 2;
+          const rows = subnet?.rows || 1;
+
+          const relX = position.x - targetSubnetAbsPos.x;
+          const relY = position.y - targetSubnetAbsPos.y;
+
+          const col = Math.max(0, Math.min(cols - 1, Math.round((relX - 60) / 340)));
+          const row = Math.max(0, Math.min(rows - 1, Math.round((relY - 60) / 190)));
+
+          finalDropPos = {
+            x: 60 + col * 340,
+            y: 60 + row * 190
+          };
+        }
 
         setDropState({ position: finalDropPos, type });
         pendingSubnetIdRef.current = targetSubnetId;
@@ -978,6 +1146,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     },
     [reactFlowInstance, networkConfig, saveNetworkConfig, showNotification, triggerArchitectureAudit]
   );
+
+
 
   return (
     <div style={styles.wrapper}>
@@ -989,6 +1159,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         onRefresh={fetchContainers}
         onSave={saveGraphLocally}
         onConfigureVpc={() => setShowVpcSettings(true)}
+        onSimulateTraffic={() => setShowTrafficSimulator(true)}
       />
 
       <div style={styles.bodyWrapper}>
@@ -1162,6 +1333,26 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             showToast("VPC configuration saved");
             triggerArchitectureAudit(newConfig);
           }}
+          initialTab="info"
+        />
+      )}
+
+      {showTrafficSimulator && (
+        <VpcModal
+          vpcConfig={networkConfig.vpcConfig}
+          subnets={networkConfig.subnets}
+          nodes={containers}
+          nodeSecurityGroups={networkConfig.nodeSecurityGroups}
+          nodeSubnetMap={networkConfig.nodeSubnetMap}
+          onClose={() => setShowTrafficSimulator(false)}
+          onSaveVpcConfig={(config) => {
+            const newConfig = { ...networkConfig, vpcConfig: config };
+            saveNetworkConfig(newConfig);
+            setShowTrafficSimulator(false);
+            showToast("VPC configuration saved");
+            triggerArchitectureAudit(newConfig);
+          }}
+          initialTab="simulator"
         />
       )}
 

@@ -1,11 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { ContainerManager } from '../../../infrastructure/docker/ContainerManager';
+import { NetworkService } from '../../network/services/networkService';
 
 export interface Project {
   id: string;
   name: string;
   createdAt: string;
+  networkConfig?: any;
 }
 
 const DB_PATH = path.join(__dirname, '../../../../projects.json');
@@ -45,6 +47,15 @@ export class ProjectService {
 
   public static async deleteProject(id: string): Promise<void> {
     const db = this.readDB();
+    const project = db.find(p => p.id === id);
+    if (project && project.networkConfig) {
+      try {
+        await NetworkService.cleanupProjectNetwork(id, project.networkConfig);
+      } catch (err) {
+        console.error(`Failed to cleanup network policies during project cleanup:`, err);
+      }
+    }
+
     const filtered = db.filter(p => p.id !== id);
     this.writeDB(filtered);
 
@@ -56,6 +67,21 @@ export class ProjectService {
       } catch (err) {
         console.error(`Failed to delete container ${c.id} during project cleanup:`, err);
       }
+    }
+  }
+
+  public static async getNetworkConfig(projectId: string): Promise<any> {
+    const db = this.readDB();
+    const project = db.find(p => p.id === projectId);
+    return project?.networkConfig || null;
+  }
+
+  public static async saveNetworkConfig(projectId: string, networkConfig: any): Promise<void> {
+    const db = this.readDB();
+    const project = db.find(p => p.id === projectId);
+    if (project) {
+      project.networkConfig = networkConfig;
+      this.writeDB(db);
     }
   }
 }

@@ -1,23 +1,25 @@
-import { Server, ArrowLeft, RefreshCw, Save, Plus, Network } from 'lucide-react';
+import { Server, ArrowLeft, RefreshCw, Save, Network, Play } from 'lucide-react';
 
 interface CanvasTopbarProps {
   projectName: string;
   loading: boolean;
-  creating: boolean;
+  creating?: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onSave: () => void;
   onConfigureVpc: () => void;
+  onSimulateTraffic: () => void;
 }
 
 export default function CanvasTopbar({
   projectName,
   loading,
-  creating,
+  creating: _creating,
   onBack,
   onRefresh,
   onSave,
   onConfigureVpc,
+  onSimulateTraffic,
 }: CanvasTopbarProps) {
   return (
     <div style={styles.topbar} className="glass">
@@ -43,6 +45,11 @@ export default function CanvasTopbar({
         <button onClick={onConfigureVpc} style={styles.saveBtn} title="Configure VPC Settings">
           <Network size={16} style={{ marginRight: 6 }} />
           VPC Settings
+        </button>
+
+        <button onClick={onSimulateTraffic} style={styles.saveBtn} title="Simulate Traffic Routing">
+          <Play size={16} style={{ marginRight: 6 }} />
+          Traffic Simulator
         </button>
 
         <button onClick={onSave} style={styles.saveBtn} title="Save Layout Locally">
