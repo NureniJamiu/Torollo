@@ -41,21 +41,149 @@ export class DockerNetworkProvider implements NetworkProvider {
     const ipMap: Record<string, string> = {};
     const idMap: Record<string, string> = {};
 
+    // 1. Obsolete Docker Subnet Network Cleanup
+    const allNetworks = await docker.listNetworks();
+    const activeSubnetIds = (config.subnets || []).map((s: any) => s.id);
+    
+    for (const net of allNetworks) {
+      if (net.Name.startsWith(`akal-subnet-${projectId}-`)) {
+        const subnetId = net.Name.replace(`akal-subnet-${projectId}-`, '');
+        if (!activeSubnetIds.includes(subnetId)) {
+          console.log(`[DockerNetworkProvider] Removing obsolete subnet network: ${net.Name}`);
+          try {
+            const network = docker.getNetwork(net.Id);
+            const netInspect = await network.inspect();
+            const connectedContainers = Object.keys(netInspect.Containers || {});
+            for (const cId of connectedContainers) {
+              await network.disconnect({ Container: cId, Force: true });
+            }
+            await network.remove();
+          } catch (err) {
+            console.error(`Failed to remove obsolete network ${net.Name}:`, err);
+          }
+        }
+      }
+    }
+
+    // 2. Ensure networks for active subnets exist
+    for (const subnet of config.subnets || []) {
+      const netName = `akal-subnet-${projectId}-${subnet.id}`;
+      const exists = allNetworks.some(n => n.Name === netName);
+      if (!exists) {
+        console.log(`[DockerNetworkProvider] Creating subnet network: ${netName} with CIDR ${subnet.cidr}`);
+        try {
+          const gateway = subnet.cidr.replace(/\.0\/\d+$/, '.1');
+          await docker.createNetwork({
+            Name: netName,
+            Driver: 'bridge',
+            IPAM: {
+              Config: [{
+                Subnet: subnet.cidr,
+                Gateway: gateway
+              }]
+            }
+          });
+        } catch (err) {
+          console.error(`Failed to create network ${netName}:`, err);
+        }
+      }
+    }
+
+    // 3. Connect containers to their target subnet networks (or akal-lab-network) and assign static IPs
     for (const ep of endpoints) {
       const containerInfo = dockerContainers.find(c => 
         c.Id === ep.nodeId ||
         c.Id.startsWith(ep.nodeId) ||
         c.Names.some(name => name.replace(/^\//, '') === ep.containerName)
       );
-      if (containerInfo && containerInfo.State === 'running') {
-        const netSettings = containerInfo.NetworkSettings?.Networks?.['akal-lab-network'];
-        if (netSettings && netSettings.IPAddress) {
-          ipMap[ep.nodeId] = netSettings.IPAddress;
-          idMap[ep.nodeId] = containerInfo.Id;
-          console.log(`[DockerNetworkProvider] Resolved node ${ep.nodeId} -> Container ${containerInfo.Id.slice(0, 12)} (${netSettings.IPAddress})`);
+      if (!containerInfo || containerInfo.State !== 'running') continue;
+
+      const container = docker.getContainer(containerInfo.Id);
+      const inspect = await container.inspect();
+      const currentNetworks = Object.keys(inspect.NetworkSettings.Networks || {});
+
+      const subnetId = config.nodeSubnetMap[ep.nodeId];
+      if (subnetId) {
+        const subnet = config.subnets.find((s: any) => s.id === subnetId);
+        if (subnet) {
+          const subnetEndpoints = endpoints.filter(e => config.nodeSubnetMap[e.nodeId] === subnetId)
+            .sort((a, b) => a.containerName.localeCompare(b.containerName));
+          const idx = subnetEndpoints.findIndex(e => e.nodeId === ep.nodeId);
+          const prefixMatch = subnet.cidr.match(/^(\d+\.\d+\.\d+)\./);
+          const targetIp = prefixMatch ? `${prefixMatch[1]}.${2 + idx}` : '';
+
+          const targetNetwork = `akal-subnet-${projectId}-${subnetId}`;
+
+          for (const netName of currentNetworks) {
+            if (netName !== targetNetwork && (netName.startsWith('akal-subnet-') || netName === 'akal-lab-network')) {
+              console.log(`[DockerNetworkProvider] Disconnecting container ${ep.containerName} from ${netName}...`);
+              try {
+                await docker.getNetwork(netName).disconnect({ Container: containerInfo.Id, Force: true });
+              } catch (err) {}
+            }
+          }
+
+          const isConnected = currentNetworks.includes(targetNetwork);
+          const currentIp = inspect.NetworkSettings.Networks[targetNetwork]?.IPAddress;
+
+          if (!isConnected || currentIp !== targetIp) {
+            if (isConnected) {
+              console.log(`[DockerNetworkProvider] Reconnecting container ${ep.containerName} to ${targetNetwork} due to IP mismatch...`);
+              try {
+                await docker.getNetwork(targetNetwork).disconnect({ Container: containerInfo.Id, Force: true });
+              } catch (err) {}
+            }
+            console.log(`[DockerNetworkProvider] Connecting container ${ep.containerName} to ${targetNetwork} with static IP ${targetIp}...`);
+            try {
+              await docker.getNetwork(targetNetwork).connect({
+                Container: containerInfo.Id,
+                EndpointConfig: {
+                  IPAMConfig: {
+                    IPv4Address: targetIp
+                  }
+                }
+              });
+            } catch (err) {
+              console.error(`Failed to connect container ${ep.containerName} to network ${targetNetwork} with IP ${targetIp}:`, err);
+            }
+          }
         }
       } else {
-        console.log(`[DockerNetworkProvider] Container for node ${ep.nodeId} (${ep.containerName}) is not running or not found.`);
+        const targetNetwork = 'akal-lab-network';
+        for (const netName of currentNetworks) {
+          if (netName !== targetNetwork && netName.startsWith('akal-subnet-')) {
+            console.log(`[DockerNetworkProvider] Disconnecting container ${ep.containerName} from subnet network ${netName}...`);
+            try {
+              await docker.getNetwork(netName).disconnect({ Container: containerInfo.Id, Force: true });
+            } catch (err) {}
+          }
+        }
+
+        if (!currentNetworks.includes(targetNetwork)) {
+          console.log(`[DockerNetworkProvider] Reconnecting container ${ep.containerName} to default network ${targetNetwork}...`);
+          try {
+            await docker.getNetwork(targetNetwork).connect({ Container: containerInfo.Id });
+          } catch (err) {}
+        }
+      }
+    }
+
+    // 4. Build IP map and ID map using updated network inspects
+    const updatedDockerContainers = await docker.listContainers({ all: true });
+    for (const ep of endpoints) {
+      const containerInfo = updatedDockerContainers.find(c => 
+        c.Id === ep.nodeId ||
+        c.Id.startsWith(ep.nodeId) ||
+        c.Names.some(name => name.replace(/^\//, '') === ep.containerName)
+      );
+      if (containerInfo && containerInfo.State === 'running') {
+        const networks = containerInfo.NetworkSettings?.Networks || {};
+        const key = Object.keys(networks).find(k => k.startsWith('akal-'));
+        if (key && networks[key] && networks[key].IPAddress) {
+          ipMap[ep.nodeId] = networks[key].IPAddress;
+          idMap[ep.nodeId] = containerInfo.Id;
+          console.log(`[DockerNetworkProvider] Resolved subnet node ${ep.nodeId} -> Container ${containerInfo.Id.slice(0, 12)} (${networks[key].IPAddress})`);
+        }
       }
     }
 
