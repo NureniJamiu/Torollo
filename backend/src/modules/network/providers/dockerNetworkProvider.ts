@@ -84,6 +84,8 @@ export class DockerNetworkProvider implements NetworkProvider {
 
       // 3. Process intents affecting this node
       for (const intent of intents) {
+        if (intent.ownerNodeId !== ep.nodeId) continue;
+
         const action = intent.type.startsWith('ALLOW') ? 'ACCEPT' : 'REJECT';
         const isTarget = intent.targetNodeId === ep.nodeId;
         const isSource = intent.sourceNodeId === ep.nodeId;
