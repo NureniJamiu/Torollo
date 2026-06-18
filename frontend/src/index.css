@@ -167,3 +167,14 @@ button {
 button:active {
   transform: scale(0.97);
 }
+
+/* Hide spin-button arrows for input of type number */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+

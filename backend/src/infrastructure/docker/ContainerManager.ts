@@ -13,7 +13,7 @@ export interface ContainerInfo {
 export class ContainerManager {
   private static LAB_PREFIX = 'akal-lab-';
   private static readonly UBUNTU_IMAGE_TAG = 'derssa/backend-lab-ubuntu:v1';
-  private static readonly POSTGRES_IMAGE_TAG = 'postgres:15-alpine';
+  private static readonly POSTGRES_IMAGE_TAG = 'derssa/backend-lab-postgres:v1';
   private static readonly MYSQL_IMAGE_TAG = 'mysql:8.0';
 
   /**
@@ -170,7 +170,9 @@ export class ContainerManager {
         'akal.node.type': type
       },
       HostConfig: {
-        AutoRemove: false
+        AutoRemove: false,
+        NetworkMode: 'akal-lab-network',
+        CapAdd: ['NET_ADMIN']
       }
     };
 

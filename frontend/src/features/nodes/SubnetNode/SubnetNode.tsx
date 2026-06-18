@@ -46,6 +46,8 @@ export default function SubnetNode({ id, data }: any) {
     }
   }
 
+
+
   const btnStyle = {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     border: 'none',
@@ -112,7 +114,9 @@ export default function SubnetNode({ id, data }: any) {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             <button
-              onClick={() => data.onResize?.(id, 'columns', cols - 1)}
+              onClick={() => {
+                if (cols > 2) data.onResize?.(id, 'columns', cols - 1);
+              }}
               style={btnStyle}
               title="Reduce Columns"
             >
@@ -120,7 +124,7 @@ export default function SubnetNode({ id, data }: any) {
             </button>
             <input
               type="number"
-              min={1}
+              min={2}
               value={cols}
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
@@ -146,6 +150,7 @@ export default function SubnetNode({ id, data }: any) {
             >
               +
             </button>
+            <span style={{ fontWeight: 'bold', fontSize: '11px', marginLeft: '2px' }}>C</span>
           </div>
 
           <span style={{ fontSize: '11px', opacity: 0.9 }}>x</span>
@@ -186,6 +191,7 @@ export default function SubnetNode({ id, data }: any) {
             >
               +
             </button>
+            <span style={{ fontWeight: 'bold', fontSize: '11px', marginLeft: '2px' }}>R</span>
           </div>
         </div>
       </div>
