@@ -143,14 +143,11 @@ export class DockerNetworkProvider implements NetworkProvider {
 
       // 6. Verification
       const iptablesS = await this.runExec(containerId, ['iptables', '-S']);
-      console.log(`[DockerNetworkProvider] Verification output (iptables -S) inside ${containerId.slice(0, 12)}:\n${iptablesS}`);
 
       if (!iptablesS || !iptablesS.includes('-N AKAL-INPUT') || !iptablesS.includes('-N AKAL-OUTPUT')) {
+        console.error(`[DockerNetworkProvider] Verification output:\n${iptablesS}`);
         throw new Error(`Firewall verification failed inside container ${containerId.slice(0, 12)}: custom chains were not created/found.`);
       }
-      
-      const iptablesL = await this.runExec(containerId, ['iptables', '-L', '-n', '-v']);
-      console.log(`[DockerNetworkProvider] Detailed status (iptables -L -n -v) inside ${containerId.slice(0, 12)}:\n${iptablesL}`);
     }
   }
 
