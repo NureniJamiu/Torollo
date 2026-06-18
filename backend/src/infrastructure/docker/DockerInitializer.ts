@@ -144,6 +144,17 @@ export class DockerInitializer {
           stream.on('end', () => resolve());
         });
 
+        console.log(`[DockerInitializer] Cleaning up package manager cache...`);
+        const cleanExec = await tempContainer.exec({
+          Cmd: ['microdnf', 'clean', 'all'],
+          AttachStdout: true,
+          AttachStderr: true
+        });
+        const cleanStream = await cleanExec.start({});
+        await new Promise<void>((resolve) => {
+          cleanStream.on('end', () => resolve());
+        });
+
         console.log(`[DockerInitializer] Committing custom MySQL image as ${tag}...`);
         await tempContainer.commit({ repo: 'derssa/backend-lab-mysql', tag: 'v1' });
 
