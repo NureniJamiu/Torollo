@@ -77,7 +77,9 @@ export class NetworkService {
                 targetNodeId: dstNodeId,
                 protocol: 'all',
                 port,
-                action
+                action,
+                direction: 'outbound',
+                ownerNodeId: srcNodeId
               });
               // Always permit icmp (ping) outbound if allowed to connect
               rules.push({
@@ -85,7 +87,9 @@ export class NetworkService {
                 targetNodeId: dstNodeId,
                 protocol: 'icmp',
                 port: 'ALL',
-                action
+                action,
+                direction: 'outbound',
+                ownerNodeId: srcNodeId
               });
             }
           } else if (sgRule.source.startsWith('subnet-')) {
@@ -97,14 +101,18 @@ export class NetworkService {
                   targetNodeId: dstNodeId,
                   protocol: 'all',
                   port,
-                  action
+                  action,
+                  direction: 'outbound',
+                  ownerNodeId: srcNodeId
                 });
                 rules.push({
                   sourceNodeId: srcNodeId,
                   targetNodeId: dstNodeId,
                   protocol: 'icmp',
                   port: 'ALL',
-                  action
+                  action,
+                  direction: 'outbound',
+                  ownerNodeId: srcNodeId
                 });
               }
             }
@@ -115,14 +123,18 @@ export class NetworkService {
               targetNodeId: sgRule.source,
               protocol: 'all',
               port,
-              action
+              action,
+              direction: 'outbound',
+              ownerNodeId: srcNodeId
             });
             rules.push({
               sourceNodeId: srcNodeId,
               targetNodeId: sgRule.source,
               protocol: 'icmp',
               port: 'ALL',
-              action
+              action,
+              direction: 'outbound',
+              ownerNodeId: srcNodeId
             });
           }
         }
@@ -143,14 +155,18 @@ export class NetworkService {
                 targetNodeId: srcNodeId,
                 protocol: 'all',
                 port,
-                action
+                action,
+                direction: 'inbound',
+                ownerNodeId: srcNodeId
               });
               rules.push({
                 sourceNodeId: dstNodeId,
                 targetNodeId: srcNodeId,
                 protocol: 'icmp',
                 port: 'ALL',
-                action
+                action,
+                direction: 'inbound',
+                ownerNodeId: srcNodeId
               });
             }
           } else if (sgRule.source.startsWith('subnet-')) {
@@ -162,14 +178,18 @@ export class NetworkService {
                   targetNodeId: srcNodeId,
                   protocol: 'all',
                   port,
-                  action
+                  action,
+                  direction: 'inbound',
+                  ownerNodeId: srcNodeId
                 });
                 rules.push({
                   sourceNodeId: dstNodeId,
                   targetNodeId: srcNodeId,
                   protocol: 'icmp',
                   port: 'ALL',
-                  action
+                  action,
+                  direction: 'inbound',
+                  ownerNodeId: srcNodeId
                 });
               }
             }
@@ -180,14 +200,18 @@ export class NetworkService {
               targetNodeId: srcNodeId,
               protocol: 'all',
               port,
-              action
+              action,
+              direction: 'inbound',
+              ownerNodeId: srcNodeId
             });
             rules.push({
               sourceNodeId: sgRule.source,
               targetNodeId: srcNodeId,
               protocol: 'icmp',
               port: 'ALL',
-              action
+              action,
+              direction: 'inbound',
+              ownerNodeId: srcNodeId
             });
           }
         }

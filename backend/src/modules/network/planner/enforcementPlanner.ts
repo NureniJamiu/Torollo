@@ -13,6 +13,8 @@ export interface NetworkIntent {
   targetNodeId?: string;
   protocol?: 'tcp' | 'udp' | 'icmp' | 'all';
   port?: string;
+  direction?: 'inbound' | 'outbound';
+  ownerNodeId?: string;
 }
 
 export class EnforcementPlanner {
@@ -26,7 +28,9 @@ export class EnforcementPlanner {
           sourceNodeId: rule.sourceNodeId,
           targetNodeId: rule.targetNodeId,
           protocol: rule.protocol,
-          port: rule.port
+          port: rule.port,
+          direction: rule.direction,
+          ownerNodeId: rule.ownerNodeId
         });
       } else {
         intents.push({
@@ -34,7 +38,9 @@ export class EnforcementPlanner {
           sourceNodeId: rule.sourceNodeId,
           targetNodeId: rule.targetNodeId,
           protocol: rule.protocol,
-          port: rule.port
+          port: rule.port,
+          direction: rule.direction,
+          ownerNodeId: rule.ownerNodeId
         });
       }
     }
