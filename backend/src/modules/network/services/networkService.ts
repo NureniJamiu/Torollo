@@ -194,11 +194,6 @@ export class NetworkService {
       }
     }
 
-    // Sort rules: DENY actions first to ensure iptables matches DENY before ALLOW
-    return rules.sort((a, b) => {
-      if (a.action === 'DENY' && b.action === 'ALLOW') return -1;
-      if (a.action === 'ALLOW' && b.action === 'DENY') return 1;
-      return 0;
-    });
+    return rules;
   }
 }

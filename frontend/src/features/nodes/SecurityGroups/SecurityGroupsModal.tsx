@@ -1,4 +1,4 @@
-import { X, ShieldAlert, Plus, Trash } from 'lucide-react';
+import { X, ShieldAlert, Plus, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import type { ContainerData } from '../../../shared/types';
 
 export interface SecurityGroupRule {
@@ -54,6 +54,26 @@ export default function SecurityGroupsModal({
     onSaveRules(rules.filter(r => r.id !== ruleId));
   };
 
+  const handleMoveRuleUp = (index: number) => {
+    if (index > 0) {
+      const newRules = [...rules];
+      const temp = newRules[index];
+      newRules[index] = newRules[index - 1];
+      newRules[index - 1] = temp;
+      onSaveRules(newRules);
+    }
+  };
+
+  const handleMoveRuleDown = (index: number) => {
+    if (index < rules.length - 1) {
+      const newRules = [...rules];
+      const temp = newRules[index];
+      newRules[index] = newRules[index + 1];
+      newRules[index + 1] = temp;
+      onSaveRules(newRules);
+    }
+  };
+
   return (
     <div style={styles.overlay}>
       <div style={styles.container} className="glass">
@@ -89,7 +109,7 @@ export default function SecurityGroupsModal({
                 </thead>
                 <tbody>
                   {rules.length > 0 ? (
-                    rules.map((rule) => {
+                    rules.map((rule, index) => {
                       // Resolve source name
                       let resolvedSource = rule.source;
                       const matchedNode = allNodes.find(n => n.id === rule.source);
@@ -122,12 +142,39 @@ export default function SecurityGroupsModal({
                           <td style={styles.tdCode}><code>{rule.port}</code></td>
                           <td style={styles.td}>{resolvedSource}</td>
                           <td style={styles.tdAction}>
-                            <button 
-                              onClick={() => handleDeleteRule(rule.id)}
-                              style={styles.deleteBtn}
-                            >
-                              <Trash size={12} />
-                            </button>
+                            <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                              <button
+                                disabled={index === 0}
+                                onClick={() => handleMoveRuleUp(index)}
+                                style={{
+                                  ...styles.moveBtn,
+                                  opacity: index === 0 ? 0.3 : 1,
+                                  cursor: index === 0 ? 'not-allowed' : 'pointer'
+                                }}
+                                title="Move Up"
+                              >
+                                <ChevronUp size={14} />
+                              </button>
+                              <button
+                                disabled={index === rules.length - 1}
+                                onClick={() => handleMoveRuleDown(index)}
+                                style={{
+                                  ...styles.moveBtn,
+                                  opacity: index === rules.length - 1 ? 0.3 : 1,
+                                  cursor: index === rules.length - 1 ? 'not-allowed' : 'pointer'
+                                }}
+                                title="Move Down"
+                              >
+                                <ChevronDown size={14} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteRule(rule.id)}
+                                style={styles.deleteBtn}
+                                title="Delete Rule"
+                              >
+                                <Trash size={12} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -357,6 +404,18 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '4px',
     borderRadius: '4px',
     transition: 'background-color 0.2s',
+  },
+  moveBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--color-text-secondary)',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s, color 0.2s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   formSection: {
     borderTop: '1px solid var(--border-color)',
