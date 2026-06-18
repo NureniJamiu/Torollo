@@ -2,7 +2,7 @@ import docker from './DockerClient';
 
 export class DockerInitializer {
   private static readonly UBUNTU_IMAGE_TAG = 'derssa/backend-lab-ubuntu:v1';
-  private static readonly POSTGRES_IMAGE_TAG = 'postgres:15-alpine';
+  private static readonly POSTGRES_IMAGE_TAG = 'derssa/backend-lab-postgres:v1';
   private static readonly MYSQL_IMAGE_TAG = 'mysql:8.0';
   private static isInitializing = false;
 
@@ -22,8 +22,27 @@ export class DockerInitializer {
       });
   }
 
+  private static async ensureSharedNetwork(): Promise<void> {
+    try {
+      const networks = await docker.listNetworks();
+      const hasNetwork = networks.some(n => n.Name === 'akal-lab-network');
+      if (!hasNetwork) {
+        console.log('Creating global shared network: akal-lab-network...');
+        await docker.createNetwork({
+          Name: 'akal-lab-network',
+          Driver: 'bridge'
+        });
+      } else {
+        console.log('Global shared network akal-lab-network ready');
+      }
+    } catch (err) {
+      console.error('[DockerInitializer] Failed to check/create global network:', err);
+    }
+  }
+
   private static async checkAndPullImages(): Promise<void> {
     try {
+      await this.ensureSharedNetwork();
       const images = await docker.listImages();
       const tags = images.flatMap(img => img.RepoTags || []);
 

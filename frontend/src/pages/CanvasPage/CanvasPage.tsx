@@ -26,6 +26,7 @@ import VpcModal from '../../features/nodes/VpcNode/VpcModal';
 import type { VPCConfig } from '../../features/nodes/VpcNode/VpcModal';
 import ButtonEdge from './components/ButtonEdge';
 import { validateArchitecture } from '../../shared/utils/architectureValidator';
+import { API_BASE } from '../../shared/types';
 
 interface CanvasPageProps {
   projectId: string;
@@ -152,6 +153,17 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     const grownConfig = autoGrowContainers(newConfig, containers, positionsRef.current);
     setNetworkConfig(grownConfig);
     localStorage.setItem(`akal-lab-network-config-${projectId}`, JSON.stringify(grownConfig));
+
+    // Sync to backend to trigger runtime enforcement
+    fetch(`${API_BASE}/api/projects/${projectId}/network-config`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ networkConfig: grownConfig })
+    }).catch(err => {
+      console.error('Failed to sync network configuration to backend:', err);
+    });
   }, [projectId, containers]);
 
   const triggerArchitectureAudit = useCallback((configToValidate: NetworkConfig) => {
@@ -203,7 +215,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   }, [networkConfig, saveNetworkConfig, showToast, triggerArchitectureAudit]);
 
   const handleSubnetResize = useCallback((subnetId: string, dimension: 'columns' | 'rows', newValue: number) => {
-    if (newValue < 1) return;
+    if (dimension === 'columns' && newValue < 2) return;
+    if (dimension === 'rows' && newValue < 1) return;
 
     const subnet = networkConfig.subnets.find(s => s.id === subnetId);
     if (!subnet) return;
@@ -412,25 +425,45 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       }
     }
 
-    const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        if (!parsed.vpcConfig) {
-          parsed.vpcConfig = defaultVpcConfig;
+    // Fetch network config from backend, fallback to localStorage if unavailable
+    fetch(`${API_BASE}/api/projects/${projectId}/network-config`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.vpcConfig) {
+          setNetworkConfig(data);
+        } else {
+          const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
+          if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            if (!parsed.vpcConfig) {
+              parsed.vpcConfig = defaultVpcConfig;
+            }
+            setNetworkConfig(parsed);
+          } else {
+            setNetworkConfig({
+              vpcConfig: defaultVpcConfig,
+              subnets: [],
+              nodeSubnetMap: {},
+              nodeSecurityGroups: {}
+            });
+          }
         }
-        setNetworkConfig(parsed);
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      setNetworkConfig({
-        vpcConfig: defaultVpcConfig,
-        subnets: [],
-        nodeSubnetMap: {},
-        nodeSecurityGroups: {}
+      })
+      .catch(err => {
+        console.error('Failed to fetch network config from backend, using localStorage:', err);
+        const savedConfig = localStorage.getItem(`akal-lab-network-config-${projectId}`);
+        if (savedConfig) {
+          try {
+            const parsed = JSON.parse(savedConfig);
+            if (!parsed.vpcConfig) {
+              parsed.vpcConfig = defaultVpcConfig;
+            }
+            setNetworkConfig(parsed);
+          } catch (e) {
+            console.error(e);
+          }
+        }
       });
-    }
 
     const timer = setInterval(fetchContainers, 4000);
     return () => clearInterval(timer);
@@ -1001,8 +1034,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         const isPublic = type === 'subnet-public';
         const cols = 2;
         const rows = 1;
-        const subnetWidth = 20 + cols * 310;
-        const subnetHeight = 50 + rows * 190;
+        const subnetWidth = cols * 340;
+        const subnetHeight = 70 + rows * 190;
         const subnetCenterX = position.x + subnetWidth / 2;
         const subnetCenterY = position.y + subnetHeight / 2;
 
