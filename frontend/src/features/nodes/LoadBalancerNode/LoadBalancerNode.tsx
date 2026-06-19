@@ -20,7 +20,7 @@ export default function LoadBalancerNode({ data }: LoadBalancerNodeProps) {
         boxShadow: isRunning ? '0 10px 15px -3px rgba(239, 68, 68, 0.15)' : undefined
       }}
     >
-      <Handle type="target" position={Position.Left} className={styles.handle} />
+      <Handle type="target" position={Position.Left} id="target" className={styles.handle} />
 
       <div className={styles.header}>
         <div className={styles.titleContainer}>
@@ -129,7 +129,7 @@ export default function LoadBalancerNode({ data }: LoadBalancerNodeProps) {
         </button>
       </div>
 
-      <Handle type="source" position={Position.Right} className={styles.handle} />
+      <Handle type="source" position={Position.Right} id="source" className={styles.handle} />
     </div>
   );
 }
