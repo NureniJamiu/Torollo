@@ -384,7 +384,7 @@ export class DockerNetworkProvider implements NetworkProvider {
         if (targetIps.length > 0) {
           upstreamServers = targetIps.map((ip: string) => `    server ${ip};`).join('\n');
         } else {
-          upstreamServers = '    # No upstream servers configured;';
+          upstreamServers = '    server 127.0.0.1:81 down; # Fallback when no targets are configured';
         }
 
         const nginxConfig = `events { worker_connections 1024; }
