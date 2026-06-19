@@ -169,6 +169,14 @@ export class DockerNetworkProvider implements NetworkProvider {
 
           for (const netName of currentNetworks) {
             if (netName !== targetNetwork && (netName.startsWith('akal-subnet-') || netName === 'akal-lab-network')) {
+              if (netName === 'akal-lab-network') {
+                const isLoadBalancer = nodeType === 'loadbalancer';
+                const isPublicUbuntu = nodeType === 'ubuntu' && subnet.type === 'public';
+                if (isLoadBalancer || isPublicUbuntu) {
+                  continue; // Keep connected to default bridge network for port mappings
+                }
+              }
+
               if (nodeType === 'nat') {
                 const matchedSubnet = (config.subnets || []).find((s: any) => `akal-subnet-${projectId}-${s.id}` === netName);
                 if (matchedSubnet) {
@@ -218,6 +226,18 @@ export class DockerNetworkProvider implements NetworkProvider {
               });
             } catch (err) {
               console.error(`Failed to connect container ${ep.containerName} to network ${targetNetwork} with IP ${targetIp}:`, err);
+            }
+          }
+
+          // Reconnect to default akal-lab-network if node is public (loadbalancer or public ubuntu) and disconnected
+          const isLoadBalancer = nodeType === 'loadbalancer';
+          const isPublicUbuntu = nodeType === 'ubuntu' && subnet.type === 'public';
+          if ((isLoadBalancer || isPublicUbuntu) && !currentNetworks.includes('akal-lab-network')) {
+            console.log(`[DockerNetworkProvider] Reconnecting public container ${ep.containerName} to default network akal-lab-network...`);
+            try {
+              await docker.getNetwork('akal-lab-network').connect({ Container: containerInfo.Id });
+            } catch (err) {
+              console.error(`Failed to reconnect public container ${ep.containerName} to default network:`, err);
             }
           }
         }
