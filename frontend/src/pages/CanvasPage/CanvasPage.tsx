@@ -729,7 +729,21 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             instanceCount,
             onStart: startContainer,
             onStop: stopContainer,
-            onDelete: (id: string) => setDeleteTarget(id),
+            onDelete: (id: string) => {
+              const usingAsgs = Object.keys(networkConfig?.asgs || {}).filter(asgId => networkConfig?.asgs?.[asgId]?.parentId === id);
+              const hasActiveAsg = usingAsgs.some(asgId => {
+                const container = containers.find(c => c.id === asgId);
+                return container && container.state === 'running';
+              });
+              if (hasActiveAsg) {
+                showNotification({
+                  type: 'error',
+                  message: `Cannot delete node: it is used as a template by an active Auto Scaling Group. Please stop the ASG first.`
+                });
+                return;
+              }
+              setDeleteTarget(id);
+            },
             onTerminalOpen: (nodeType === 'loadbalancer' || nodeType === 'autoscalinggroup') ? () => {} : onTerminalOpen,
             onInspect: (id: string, name: string) => {
               if (nodeType === 'mysql') {
@@ -1060,6 +1074,23 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   }, [reactFlowInstance, networkConfig, projectId, saveNetworkConfig, setNodes, triggerArchitectureAudit, showNotification]);
 
   const onNodesDelete = useCallback((deleted: Node[]) => {
+    const blockedNode = deleted.find(node => {
+      const usingAsgs = Object.keys(networkConfig?.asgs || {}).filter(asgId => networkConfig?.asgs?.[asgId]?.parentId === node.id);
+      return usingAsgs.some(asgId => {
+        const container = containers.find(c => c.id === asgId);
+        return container && container.state === 'running';
+      });
+    });
+
+    if (blockedNode) {
+      showNotification({
+        type: 'error',
+        message: `Cannot delete node "${blockedNode.data?.name || 'Node'}": it is used as a template by an active Auto Scaling Group. Please stop the ASG first.`
+      });
+      fetchContainers();
+      return;
+    }
+
     let updatedSubnets = [...networkConfig.subnets];
     const updatedNodeSubnetMap = { ...networkConfig.nodeSubnetMap };
     const updatedSecurityGroups = { ...networkConfig.nodeSecurityGroups };
@@ -1094,7 +1125,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         nodeIpMap: updatedNodeIpMap
       });
     }
-  }, [networkConfig, saveNetworkConfig]);
+  }, [networkConfig, saveNetworkConfig, containers, fetchContainers, showNotification]);
 
   const saveGraphLocally = () => {
     const currentPositions: Record<string, { x: number; y: number }> = {};

@@ -461,7 +461,7 @@ export class DockerNetworkProvider implements NetworkProvider {
             const netKey = Object.keys(networks).find(k => k.startsWith('akal-subnet-'));
             if (netKey && networks[netKey]?.IPAddress) {
               if (!asgIps[asgId]) asgIps[asgId] = [];
-              asgIps[asgId].push(networks[netKey].IPAddress);
+                  asgIps[asgId].push(networks[netKey].IPAddress);
             }
           }
         }
@@ -470,7 +470,10 @@ export class DockerNetworkProvider implements NetworkProvider {
         const targetIps: string[] = [];
         for (const tId of targets) {
           const asgConfig = config.asgs?.[tId];
-          if (asgConfig && asgConfig.parentId && ipMap[asgConfig.parentId]) {
+          const asgContainer = updatedDockerContainers.find(c => c.Id === tId || c.Id.startsWith(tId));
+          const isAsgRunning = asgContainer && asgContainer.State === 'running';
+          
+          if (asgConfig && asgConfig.parentId && isAsgRunning && ipMap[asgConfig.parentId]) {
             targetIps.push(ipMap[asgConfig.parentId]);
           } else if (asgIps[tId]) {
             targetIps.push(...asgIps[tId]);
@@ -492,7 +495,10 @@ export class DockerNetworkProvider implements NetworkProvider {
             const ruleTargetIps: string[] = [];
             
             const asgConfig = config.asgs?.[ruleTargetId];
-            if (asgConfig && asgConfig.parentId && ipMap[asgConfig.parentId]) {
+            const asgContainer = updatedDockerContainers.find(c => c.Id === ruleTargetId || c.Id.startsWith(ruleTargetId));
+            const isAsgRunning = asgContainer && asgContainer.State === 'running';
+
+            if (asgConfig && asgConfig.parentId && isAsgRunning && ipMap[asgConfig.parentId]) {
               ruleTargetIps.push(ipMap[asgConfig.parentId]);
             } else if (asgIps[ruleTargetId]) {
               ruleTargetIps.push(...asgIps[ruleTargetId]);
