@@ -469,7 +469,10 @@ export class DockerNetworkProvider implements NetworkProvider {
         const targets = config.loadBalancerTargets?.[ep.nodeId] || [];
         const targetIps: string[] = [];
         for (const tId of targets) {
-          if (asgIps[tId]) {
+          const asgConfig = config.asgs?.[tId];
+          if (asgConfig && asgConfig.parentId && ipMap[asgConfig.parentId]) {
+            targetIps.push(ipMap[asgConfig.parentId]);
+          } else if (asgIps[tId]) {
             targetIps.push(...asgIps[tId]);
           } else if (ipMap[tId]) {
             targetIps.push(ipMap[tId]);
@@ -488,7 +491,10 @@ export class DockerNetworkProvider implements NetworkProvider {
             const ruleTargetId = rule.targetId;
             const ruleTargetIps: string[] = [];
             
-            if (asgIps[ruleTargetId]) {
+            const asgConfig = config.asgs?.[ruleTargetId];
+            if (asgConfig && asgConfig.parentId && ipMap[asgConfig.parentId]) {
+              ruleTargetIps.push(ipMap[asgConfig.parentId]);
+            } else if (asgIps[ruleTargetId]) {
               ruleTargetIps.push(...asgIps[ruleTargetId]);
             } else if (ipMap[ruleTargetId]) {
               ruleTargetIps.push(ipMap[ruleTargetId]);
