@@ -296,7 +296,7 @@ export default function AsgModal({
                     >
                       <option value="">-- Select template server --</option>
                       {availableTemplates.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.ip || 'pending'})</option>
+                        <option key={c.id} value={c.id}>{c.name} ({config?.nodeIpMap?.[c.id] || c.ip || 'pending'})</option>
                       ))}
                     </select>
                   </div>
