@@ -39,6 +39,9 @@ export class DockerNetworkProvider implements NetworkProvider {
         console.warn(`[DockerNetworkProvider] Container ${containerId.slice(0, 12)} not found during exec [${cmd.join(' ')}]. Skipping.`);
         return '';
       }
+      if (cmd[0] === 'ip' && cmd[1] === 'route' && cmd[2] === 'del' && err.message?.includes('No such process')) {
+        return '';
+      }
       console.error(`Exec failed for cmd [${cmd.join(' ')}]:`, err);
       throw err;
     }
