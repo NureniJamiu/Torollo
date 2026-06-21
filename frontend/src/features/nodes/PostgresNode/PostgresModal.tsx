@@ -188,10 +188,16 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
           // Trigger replicas update replication flow
           if (replicas > 0) {
             setTimeout(() => {
+              const repParticleIds: string[] = [];
               for (let r = 0; r < replicas; r++) {
                 const repParticleId = Math.random().toString(36).substr(2, 9);
+                repParticleIds.push(repParticleId);
                 setParticles(prev => [...prev, { id: repParticleId, target: 'replica', index: r, isWrite: true, isReplicationCopy: true }]);
               }
+              // Clean up replication particles after 800ms
+              setTimeout(() => {
+                setParticles(prev => prev.filter(p => !repParticleIds.includes(p.id)));
+              }, 800);
             }, 400);
           }
 

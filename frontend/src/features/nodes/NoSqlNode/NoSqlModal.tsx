@@ -198,10 +198,16 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
           // Replicating to replica members (visual secondary particles)
           if (replicas > 0) {
             setTimeout(() => {
+              const repParticleIds: string[] = [];
               for (let r = 0; r < replicas; r++) {
                 const repParticleId = Math.random().toString(36).substr(2, 9);
+                repParticleIds.push(repParticleId);
                 setParticles(prev => [...prev, { id: repParticleId, target: targetShard, isWrite: true, isReplicaCopy: true, replicaIndex: r }]);
               }
+              // Clean up replica replication particles after 800ms
+              setTimeout(() => {
+                setParticles(prev => prev.filter(p => !repParticleIds.includes(p.id)));
+              }, 800);
             }, 400);
           }
         }
@@ -297,17 +303,25 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
           0% { left: 15%; top: 50%; opacity: 1; }
           100% { left: 45%; top: ${topPercent}%; opacity: 0.8; }
         }
+        @keyframes readFlowToShardPrimary${i} {
+          0% { left: 15%; top: 50%; opacity: 1; }
+          45% { left: 45%; top: ${topPercent}%; opacity: 0.9; }
+          55% { left: 45%; top: ${topPercent}%; opacity: 0.9; }
+          100% { left: 15%; top: 50%; opacity: 1; }
+        }
       `;
 
-      // Animations for replica copy flow
+      // Animations for replica read round-trip and replication copy flow
       for (let r = 0; r < 3; r++) {
         const repOffset = (r - (replicas - 1) / 2) * 12;
         const repTopPercent = topPercent + (replicas > 1 ? repOffset : 0);
         
         styleStr += `
-          @keyframes flowToShardReplica${i}_${r} {
+          @keyframes readFlowToShardReplica${i}_${r} {
             0% { left: 15%; top: 50%; opacity: 1; }
-            100% { left: 78%; top: ${repTopPercent}%; opacity: 0.8; }
+            45% { left: 78%; top: ${repTopPercent}%; opacity: 0.9; }
+            55% { left: 78%; top: ${repTopPercent}%; opacity: 0.9; }
+            100% { left: 15%; top: 50%; opacity: 1; }
           }
           @keyframes replicationToShardReplica${i}_${r} {
             0% { left: 45%; top: ${topPercent}%; opacity: 1; }
