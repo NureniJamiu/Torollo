@@ -185,4 +185,15 @@ export class ContainerController {
       res.status(500).json({ error: err.message });
     }
   }
+
+  public static async scale(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { cpus, memory } = req.body;
+      await ContainerService.scaleContainer(id as string, cpus, memory);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
 }

@@ -183,4 +183,8 @@ export class ContainerService {
   public static async executeNosqlQuery(containerId: string, query: string): Promise<string> {
     return ContainerManager.executeMongoCommand(containerId, query);
   }
+
+  public static async scaleContainer(containerId: string, cpus?: number, memory?: number): Promise<void> {
+    await ContainerManager.scaleContainer(containerId, cpus, memory);
+  }
 }

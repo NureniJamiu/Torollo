@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Server, Library, Network, Search, GitFork, Table2, Braces, Layers, ArrowRightLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Server, Database, Library, Network, Search, GitFork, Braces, Layers, ArrowRightLeft } from 'lucide-react';
 
 interface NodeLibraryProps {
   onCollapseChange?: (collapsed: boolean) => void;
@@ -80,8 +80,8 @@ export default function NodeLibrary({ onCollapseChange }: NodeLibraryProps) {
           type: 'postgres',
           name: 'SQL Database',
           desc: 'Relational DB + Shell',
-          icon: <Table2 size={18} color="#64748B" />,
-          collapsedIcon: <Table2 size={20} color="#64748B" />
+          icon: <Database size={18} color="#64748B" />,
+          collapsedIcon: <Database size={20} color="#64748B" />
         },
         {
           type: 'nosql',
