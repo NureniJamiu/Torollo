@@ -1,5 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
-import { Play, Square, Trash2, Table2, Search, Shield } from 'lucide-react';
+import { Play, Square, Trash2, Database, Search, Shield } from 'lucide-react';
 import styles from '../ServiceNode.module.css'; // Reuse core card styles for visual parity!
 
 interface PostgresNodeProps {
@@ -25,7 +25,7 @@ export default function PostgresNode({ data }: PostgresNodeProps) {
 
       <div className={styles.header}>
         <div className={styles.titleContainer}>
-          <Table2 size={18} color={isRunning ? '#64748B' : '#6B7280'} />
+          <Database size={18} color={isRunning ? '#64748B' : '#6B7280'} />
           <span className={styles.title}>{data.name}</span>
           <button
             onClick={(e) => {

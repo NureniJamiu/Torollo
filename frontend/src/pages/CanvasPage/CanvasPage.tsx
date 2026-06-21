@@ -9,6 +9,7 @@ import NatGatewayModal from '../../features/nodes/NatNode/NatGatewayModal';
 import PostgresNode from '../../features/nodes/PostgresNode/PostgresNode';
 import PostgresModal from '../../features/nodes/PostgresNode/PostgresModal';
 import NoSqlNode from '../../features/nodes/NoSqlNode/NoSqlNode';
+import NoSqlModal from '../../features/nodes/NoSqlNode/NoSqlModal';
 
 import LoadBalancerNode from '../../features/nodes/LoadBalancerNode/LoadBalancerNode';
 import LoadBalancerModal from '../../features/nodes/LoadBalancerNode/LoadBalancerModal';
@@ -118,6 +119,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [inspectingPostgres, setInspectingPostgres] = useState<{ id: string; name: string } | null>(null);
+  const [inspectingNosql, setInspectingNosql] = useState<{ id: string; name: string } | null>(null);
 
   const [inspectingNat, setInspectingNat] = useState<{ id: string; name: string } | null>(null);
   const [inspectingLoadBalancer, setInspectingLoadBalancer] = useState<{ id: string; name: string } | null>(null);
@@ -748,6 +750,8 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
             onInspect: (id: string, name: string) => {
               if (nodeType === 'postgres') {
                 setInspectingPostgres({ id, name });
+              } else if (nodeType === 'nosql') {
+                setInspectingNosql({ id, name });
               } else if (nodeType === 'nat') {
                 setInspectingNat({ id, name });
               } else if (nodeType === 'loadbalancer') {
@@ -1463,7 +1467,14 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
         />
       )}
 
-
+      {inspectingNosql && (
+        <NoSqlModal
+          containerId={inspectingNosql.id}
+          nodeName={inspectingNosql.name}
+          projectId={projectId}
+          onClose={() => setInspectingNosql(null)}
+        />
+      )}
 
       {inspectingNat && (
         <NatGatewayModal
