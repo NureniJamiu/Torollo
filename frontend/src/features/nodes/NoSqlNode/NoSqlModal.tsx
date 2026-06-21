@@ -74,6 +74,7 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
   const [simMetrics, setSimMetrics] = useState({ routed: 0, staleReads: 0 });
   const [lastHashedKey, setLastHashedKey] = useState<string>('');
   const [lastShardIndex, setLastShardIndex] = useState<number>(-1);
+  const [crashedShards, setCrashedShards] = useState<Record<number, boolean>>({});
 
   const fetchExplorerDataRef = useRef<() => Promise<void>>(undefined);
 
@@ -111,6 +112,28 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
   useEffect(() => {
     fetchExplorerData();
   }, [fetchExplorerData]);
+
+  // Automatic replica promotion (election) upon Shard Primary crash
+  useEffect(() => {
+    const crashedShardIndexStr = Object.keys(crashedShards).find(k => crashedShards[Number(k)] && replicas > 0);
+    if (crashedShardIndexStr !== undefined) {
+      const shardIdx = Number(crashedShardIndexStr);
+      const timer = setTimeout(() => {
+        setCrashedShards(prev => ({ ...prev, [shardIdx]: false }));
+        setSimLogs(prev => [
+          { 
+            id: Math.random().toString(), 
+            type: 'sys', 
+            msg: `REPLICA ELECTION: Shard #${shardIdx + 1} Replica Set detected Primary outage. Automatically elected Secondary to Primary. Shard operations restored.`, 
+            time: new Date().toLocaleTimeString() 
+          },
+          ...prev
+        ]);
+      }, 3500); // Election delay 3.5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [crashedShards, replicas]);
+
 
   // Interactive zoom & pan helper handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -153,24 +176,34 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
       if (isWrite) {
         setLastHashedKey(randomDocId);
         setLastShardIndex(targetShard);
-        setSimLogs(prev => [
-          { id: logId, type: 'route', msg: `WRITE: Document ID [${randomDocId}] -> md5Hash(${randomDocId}) -> Routed to Shard Primary #${targetShard + 1} (Partition ${targetShard})`, time: timeStr },
-          ...prev.slice(0, 19)
-        ]);
-        setSimMetrics(prev => ({ ...prev, routed: prev.routed + 1 }));
+        
+        if (crashedShards[targetShard]) {
+          setSimLogs(prev => [
+            { id: logId, type: 'warn', msg: `WRITE FAILED: Shard Primary #${targetShard + 1} is crashed/unreachable. Query router timed out.`, time: timeStr },
+            ...prev.slice(0, 19)
+          ]);
+          setParticles(prev => [...prev, { id: particleId, target: targetShard, isWrite: true }]);
+          setActiveHighlightNode(`shard-primary-${targetShard}`);
+        } else {
+          setSimLogs(prev => [
+            { id: logId, type: 'route', msg: `WRITE: Document ID [${randomDocId}] ➔ hash ➔ Routed to Shard Primary #${targetShard + 1} (Partition ${targetShard})`, time: timeStr },
+            ...prev.slice(0, 19)
+          ]);
+          setSimMetrics(prev => ({ ...prev, routed: prev.routed + 1 }));
 
-        // Spawn write particle to Shard Primary
-        setParticles(prev => [...prev, { id: particleId, target: targetShard, isWrite: true }]);
-        setActiveHighlightNode(`shard-primary-${targetShard}`);
+          // Spawn write particle to Shard Primary
+          setParticles(prev => [...prev, { id: particleId, target: targetShard, isWrite: true }]);
+          setActiveHighlightNode(`shard-primary-${targetShard}`);
 
-        // Replicating to replica members (visual secondary particles)
-        if (replicas > 0) {
-          setTimeout(() => {
-            for (let r = 0; r < replicas; r++) {
-              const repParticleId = Math.random().toString(36).substr(2, 9);
-              setParticles(prev => [...prev, { id: repParticleId, target: targetShard, isWrite: true, isReplicaCopy: true, replicaIndex: r }]);
-            }
-          }, 400);
+          // Replicating to replica members (visual secondary particles)
+          if (replicas > 0) {
+            setTimeout(() => {
+              for (let r = 0; r < replicas; r++) {
+                const repParticleId = Math.random().toString(36).substr(2, 9);
+                setParticles(prev => [...prev, { id: repParticleId, target: targetShard, isWrite: true, isReplicaCopy: true, replicaIndex: r }]);
+              }
+            }, 400);
+          }
         }
 
         setTimeout(() => {
@@ -180,7 +213,30 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
       } else {
         // Read: demonstrate eventual consistency stale reads occasionally
         const isStale = replicas > 0 && Math.random() > 0.8;
-        if (isStale) {
+        if (crashedShards[targetShard]) {
+          if (replicas > 0) {
+            // Can read from replica
+            const targetReplica = Math.floor(Math.random() * replicas);
+            setSimLogs(prev => [
+              { id: logId, type: 'route', msg: `READ SUCCESS: Primary Shard #${targetShard + 1} offline. Router retrieved data from secondary Replica #${targetReplica + 1}.`, time: timeStr },
+              ...prev.slice(0, 19)
+            ]);
+            setSimMetrics(prev => ({ ...prev, routed: prev.routed + 1 }));
+            setParticles(prev => [...prev, { id: particleId, target: targetShard, isWrite: false, replicaIndex: targetReplica }]);
+            setActiveHighlightNode(`shard-replica-${targetShard}-${targetReplica}`);
+          } else {
+            setSimLogs(prev => [
+              { id: logId, type: 'warn', msg: `READ FAILED: Shard #${targetShard + 1} is offline and has no replicas available.`, time: timeStr },
+              ...prev.slice(0, 19)
+            ]);
+            setParticles(prev => [...prev, { id: particleId, target: targetShard, isWrite: false }]);
+            setActiveHighlightNode(`shard-primary-${targetShard}`);
+          }
+          setTimeout(() => {
+            setParticles(prev => prev.filter(p => p.id !== particleId));
+            setActiveHighlightNode(null);
+          }, 800);
+        } else if (isStale) {
           const targetReplica = Math.floor(Math.random() * replicas);
           setSimLogs(prev => [
             { id: logId, type: 'warn', msg: `READ WARNING: Read query for [${randomDocId}] routed to Shard #${targetShard + 1} Replica #${targetReplica + 1} returned stale secondary state (Eventual Consistency lag).`, time: timeStr },
@@ -201,7 +257,7 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
           if (useReplica) {
             const targetReplica = Math.floor(Math.random() * replicas);
             setSimLogs(prev => [
-              { id: logId, type: 'sys', msg: `READ: Query for ID [${randomDocId}] -> Router directed to Shard #${targetShard + 1} Replica #${targetReplica + 1}`, time: timeStr },
+              { id: logId, type: 'sys', msg: `READ: Query for ID [${randomDocId}] ➔ Router directed to Shard #${targetShard + 1} Replica #${targetReplica + 1}`, time: timeStr },
               ...prev.slice(0, 19)
             ]);
             setSimMetrics(prev => ({ ...prev, routed: prev.routed + 1 }));
@@ -210,7 +266,7 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
             setActiveHighlightNode(`shard-replica-${targetShard}-${targetReplica}`);
           } else {
             setSimLogs(prev => [
-              { id: logId, type: 'sys', msg: `READ: Query for ID [${randomDocId}] -> Router directed to Shard Primary #${targetShard + 1}`, time: timeStr },
+              { id: logId, type: 'sys', msg: `READ: Query for ID [${randomDocId}] ➔ Router directed to Shard Primary #${targetShard + 1}`, time: timeStr },
               ...prev.slice(0, 19)
             ]);
             setSimMetrics(prev => ({ ...prev, routed: prev.routed + 1 }));
@@ -533,21 +589,53 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
                     Observe request hashing and eventual consistency secondary replication lag.
                   </p>
                 </div>
-                <button
-                  onClick={() => setTrafficActive(p => !p)}
-                  style={{
-                    backgroundColor: trafficActive ? '#EF4444' : '#10B981',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  {trafficActive ? 'Pause Traffic' : 'Start Simulation'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setTrafficActive(p => !p)}
+                    style={{
+                      backgroundColor: trafficActive ? '#EF4444' : '#10B981',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {trafficActive ? 'Pause Traffic' : 'Start Simulation'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const activeTarget = lastShardIndex >= 0 ? lastShardIndex : 0;
+                      const isCurrentlyCrashed = !!crashedShards[activeTarget];
+                      setCrashedShards(prev => ({ ...prev, [activeTarget]: !isCurrentlyCrashed }));
+                      setSimLogs(prev => [
+                        {
+                          id: Math.random().toString(),
+                          type: isCurrentlyCrashed ? 'sys' : 'warn',
+                          msg: isCurrentlyCrashed
+                            ? `RECOVERY: Shard Primary #${activeTarget + 1} recovered and is ONLINE.`
+                            : `CRASH EVENT: Shard Primary #${activeTarget + 1} crashed (Offline).`,
+                          time: new Date().toLocaleTimeString()
+                        },
+                        ...prev
+                      ]);
+                    }}
+                    style={{
+                      backgroundColor: crashedShards[lastShardIndex >= 0 ? lastShardIndex : 0] ? '#10B981' : '#EF4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {crashedShards[lastShardIndex >= 0 ? lastShardIndex : 0] ? 'Recover Shard' : 'Crash Shard'}
+                  </button>
+                </div>
               </div>
 
               {/* Simulation metrics */}
@@ -566,12 +654,12 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
               <style dangerouslySetInnerHTML={{__html: `
                 .flow-particle {
                   position: absolute;
-                  width: 8px;
-                  height: 8px;
+                  width: 12px;
+                  height: 12px;
                   border-radius: 50%;
                   pointer-events: none;
                   z-index: 20;
-                  box-shadow: 0 0 8px currentColor;
+                  box-shadow: 0 0 12px 4px currentColor;
                 }
                 .ring-glow {
                   position: absolute;
@@ -661,6 +749,27 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}>
+                  {/* SVG Connection Paths */}
+                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }}>
+                    {/* Path from mongos to each Shard Primary */}
+                    {Array.from({ length: shards }).map((_, i) => {
+                      const topPercent = shards === 1 ? 50 : 15 + (i * 70) / (shards - 1);
+                      return (
+                        <g key={i}>
+                          <line x1="12%" y1="50%" x2="42%" y2={`${topPercent}%`} stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="5,5" />
+                          {/* Paths from Shard Primary to its Replicas */}
+                          {replicas > 0 && Array.from({ length: replicas }).map((_, r) => {
+                            const repOffset = (r - (replicas - 1) / 2) * 12;
+                            const repTopPercent = topPercent + (replicas > 1 ? repOffset : 0);
+                            return (
+                              <line key={r} x1="42%" y1={`${topPercent}%`} x2="78%" y2={`${repTopPercent}%`} stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" strokeDasharray="3,3" />
+                            );
+                          })}
+                        </g>
+                      );
+                    })}
+                  </svg>
+
                   {/* mongos Router */}
                   <div style={{ position: 'absolute', left: '10%', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Server size={32} color="#94A3B8" />
@@ -693,6 +802,7 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
                   {Array.from({ length: shards }).map((_, i) => {
                     const topPercent = shards === 1 ? 50 : 15 + (i * 70) / (shards - 1);
                     const isNodeActive = activeHighlightNode === `shard-primary-${i}`;
+                    const isShardCrashed = !!crashedShards[i];
                     return (
                       <div 
                         key={i} 
@@ -707,13 +817,15 @@ export default function NoSqlModal({ containerId, nodeName, projectId, onClose }
                         }}
                       >
                         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                          <Database size={40} color={isNodeActive ? '#10B981' : '#64748B'} />
+                          <Database size={40} color={isShardCrashed ? '#EF4444' : (isNodeActive ? '#10B981' : '#64748B')} />
                           {isNodeActive && (
-                            <div className="ring-glow" style={{ color: '#10B981' }} />
+                            <div className="ring-glow" style={{ color: isShardCrashed ? '#EF4444' : '#10B981' }} />
                           )}
                         </div>
                         <span style={{ color: '#E2E8F0', fontSize: '11px', fontWeight: 'bold', marginTop: '4px' }}>Shard Primary #{i + 1}</span>
-                        <span style={{ color: '#64748B', fontSize: '9px' }}>10.0.2.${10 + i * 10}</span>
+                        <span style={{ color: isShardCrashed ? '#EF4444' : '#10B981', fontSize: '9px' }}>
+                          {isShardCrashed ? 'OFFLINE' : `ONLINE (10.0.2.${10 + i * 10})`}
+                        </span>
                       </div>
                     );
                   })}

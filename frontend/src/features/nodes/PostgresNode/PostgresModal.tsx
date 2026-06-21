@@ -108,10 +108,24 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
   useEffect(() => {
     fetchExplorerDataRef.current = fetchExplorerData;
   }, [fetchExplorerData]);
-
   useEffect(() => {
     fetchExplorerData();
   }, [fetchExplorerData]);
+
+  // Automatic Replica promotion upon Primary database crash
+  useEffect(() => {
+    if (isPrimaryCrashed && replicas > 0) {
+      const timer = setTimeout(() => {
+        setIsPrimaryCrashed(false);
+        setReplicas(prev => Math.max(0, prev - 1));
+        setSimLogs(prev => [
+          { id: Math.random().toString(), type: 'sys', msg: 'AUTOMATIC FAILOVER: Replica pool detected primary outage. Automatically elected Replica #1 to Primary. Primary database online.', time: new Date().toLocaleTimeString() },
+          ...prev
+        ]);
+      }, 3500); // Failover duration 3.5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isPrimaryCrashed, replicas]);
 
   // Interactive zoom & pan helper handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -669,12 +683,12 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
                 }
                 .flow-particle {
                   position: absolute;
-                  width: 8px;
-                  height: 8px;
+                  width: 12px;
+                  height: 12px;
                   border-radius: 50%;
                   pointer-events: none;
                   z-index: 20;
-                  box-shadow: 0 0 8px currentColor;
+                  box-shadow: 0 0 12px 4px currentColor;
                 }
                 .ring-glow {
                   position: absolute;
@@ -745,6 +759,21 @@ export default function PostgresModal({ containerId, nodeName, projectId, onClos
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}>
+                  {/* SVG Connection Paths */}
+                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }}>
+                    {/* Path to primary */}
+                    <line x1="12%" y1="50%" x2="42%" y2="50%" stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="5,5" />
+                    {/* Paths to replicas */}
+                    {replicas > 0 && Array.from({ length: replicas }).map((_, i) => {
+                      let repTop = '50%';
+                      if (replicas === 2) repTop = i === 0 ? '35%' : '65%';
+                      else if (replicas === 3) repTop = i === 0 ? '20%' : i === 1 ? '50%' : '80%';
+                      return (
+                        <line key={i} x1="12%" y1="50%" x2="78%" y2={repTop} stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="5,5" />
+                      );
+                    })}
+                  </svg>
+
                   {/* Client source */}
                   <div style={{ position: 'absolute', left: '10%', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Server size={32} color="#94A3B8" />
