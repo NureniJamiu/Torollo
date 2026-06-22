@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Folder, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import InputModal from '../../shared/components/InputModal';
 import ConfirmModal from '../../shared/components/ConfirmModal';
 import ProjectCard from './components/ProjectCard';
 import EmptyState from './components/EmptyState';
 import { API_BASE } from '../../shared/types';
 import type { Project } from '../../shared/types';
+import logo from '../../assets/logo.png';
 
 interface ProjectsPageProps {
   onSelectProject: (id: string, name: string) => void;
@@ -16,6 +17,7 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   const fetchProjects = async () => {
     try {
@@ -56,14 +58,17 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
     if (!deleteTarget) return;
     const id = deleteTarget.id;
     setDeleteTarget(null);
+    setDeletingIds(prev => [...prev, id]);
     try {
       const res = await fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE' });
       if (res.ok) {
         localStorage.removeItem(`akal-lab-graph-layout-${id}`);
-        fetchProjects();
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      await fetchProjects();
+      setDeletingIds(prev => prev.filter((x) => x !== id));
     }
   };
 
@@ -78,7 +83,7 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
       <div style={styles.header}>
         <div style={styles.logoRow}>
           <div style={styles.iconWrap}>
-            <Folder size={22} color="var(--color-accent)" />
+            <img src={logo} alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
           </div>
           <div>
             <h1 style={styles.title}>Project Stacks</h1>
@@ -101,6 +106,7 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
             project={p}
             onSelect={onSelectProject}
             onDelete={handleDeleteClick}
+            isDeleting={deletingIds.includes(p.id)}
           />
         ))}
         {!loading && projects.length === 0 && <EmptyState />}
@@ -156,9 +162,10 @@ const styles: Record<string, React.CSSProperties> = {
   iconWrap: {
     width: '44px',
     height: '44px',
-    borderRadius: '12px',
-    background: 'var(--color-accent-glow)',
-    border: '1px solid rgba(37, 99, 235, 0.15)',
+    borderRadius: '50%',
+    background: '#FFFFFF',
+    border: '1px solid rgba(0, 0, 0, 0.08)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
