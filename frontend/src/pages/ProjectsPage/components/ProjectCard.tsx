@@ -1,28 +1,41 @@
-import { Folder, Trash2, ArrowRight } from 'lucide-react';
+import { Folder, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import type { Project } from '../../../shared/types';
 
 interface ProjectCardProps {
   project: Project;
   onSelect: (id: string, name: string) => void;
   onDelete: (project: Project, event: React.MouseEvent) => void;
+  isDeleting?: boolean;
 }
 
-export default function ProjectCard({ project, onSelect, onDelete }: ProjectCardProps) {
+export default function ProjectCard({ project, onSelect, onDelete, isDeleting }: ProjectCardProps) {
   return (
     <div
-      onClick={() => onSelect(project.id, project.name)}
-      style={styles.card}
+      onClick={() => !isDeleting && onSelect(project.id, project.name)}
+      style={{
+        ...styles.card,
+        position: 'relative',
+        opacity: isDeleting ? 0.7 : 1,
+        pointerEvents: isDeleting ? 'none' : 'auto',
+      }}
       id={`project-card-${project.id}`}
     >
+      {isDeleting && (
+        <div style={styles.loadingOverlay}>
+          <Loader2 className="spin" size={24} color="var(--color-accent)" />
+          <span style={{ fontSize: '11px', marginTop: '6px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Deleting...</span>
+        </div>
+      )}
       <div style={styles.cardHeader}>
         <div style={styles.cardIcon}>
           <Folder size={20} color="var(--color-accent)" />
         </div>
         <button
-          onClick={(e) => onDelete(project, e)}
+          onClick={(e) => !isDeleting && onDelete(project, e)}
           style={styles.deleteBtn}
           title="Delete project"
           id={`delete-project-${project.id}`}
+          disabled={isDeleting}
         >
           <Trash2 size={14} />
         </button>
@@ -108,5 +121,19 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-accent)',
     fontSize: '13px',
     fontWeight: 500,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '16px',
+    zIndex: 10,
   },
 };
