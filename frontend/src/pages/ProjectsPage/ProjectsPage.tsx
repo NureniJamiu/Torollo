@@ -16,6 +16,7 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   const fetchProjects = async () => {
     try {
@@ -56,14 +57,17 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
     if (!deleteTarget) return;
     const id = deleteTarget.id;
     setDeleteTarget(null);
+    setDeletingIds(prev => [...prev, id]);
     try {
       const res = await fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE' });
       if (res.ok) {
         localStorage.removeItem(`akal-lab-graph-layout-${id}`);
-        fetchProjects();
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      await fetchProjects();
+      setDeletingIds(prev => prev.filter((x) => x !== id));
     }
   };
 
@@ -101,6 +105,7 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
             project={p}
             onSelect={onSelectProject}
             onDelete={handleDeleteClick}
+            isDeleting={deletingIds.includes(p.id)}
           />
         ))}
         {!loading && projects.length === 0 && <EmptyState />}
