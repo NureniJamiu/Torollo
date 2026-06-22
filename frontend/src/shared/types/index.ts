@@ -31,4 +31,4 @@ export interface TerminalInfo {
 }
 
 /** API base URL for the backend */
-export const API_BASE = 'http://localhost:5000';
+export const API_BASE = 'http://localhost:23233';
