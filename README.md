@@ -21,7 +21,18 @@ Instead of reading passive, theory-heavy documentation, students learn by *doing
 - **Run & Connect:** Turn services on/off, connect them together, and see how they interact.
 - **Observe Traffic:** Send requests and watch mock traffic flow through the system.
 - **Simulate Failures:** Take down database replicas, overload load balancers, kill message brokers, and observe how the system recovers (or fails).
-- **Practical Learning Cards:** Each infrastructure node is paired with a short, beginner-friendly learning card focusing on practical understanding.
+  - Practical Learning Cards: Each infrastructure node is paired with a short, beginner-friendly learning card focusing on practical understanding.
+
+---
+
+## ⚡ Quick Start
+
+Run the lab instantly from your terminal without needing to install anything permanently:
+
+```bash
+npx torollo start
+```
+*(Ensure Docker Desktop is running before starting)*
 
 ---
 
