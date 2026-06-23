@@ -2,69 +2,69 @@
 
 > **A local-first educational platform for backend engineering and system design, inspired by Packet Tracer.**
 
-TOROLLO is designed to help students visually learn backend architecture, Docker, microservices, databases, message brokers, scaling, failures, and distributed systems through an interactive, graph-based visual canvas.
-
----
-
-## 🚀 Core Philosophy
-
-### 1. Local-First & Docker-Powered
-Everything runs locally on the student's machine. 
-- The application directly controls and orchestrates Docker containers on the host machine.
-- **No Cloud integrations** (No AWS, Azure, or GCP).
-- **No remote infrastructure** is created or managed. 
-- All nodes in the workspace correspond to actual, live-running Docker containers on the user's system.
-
-### 2. Interactive Learning
-Instead of reading passive, theory-heavy documentation, students learn by *doing*:
-- **Create Systems:** Drag and drop real components to build architectures.
-- **Run & Connect:** Turn services on/off, connect them together, and see how they interact.
-- **Observe Traffic:** Send requests and watch mock traffic flow through the system.
-- **Simulate Failures:** Take down database replicas, overload load balancers, kill message brokers, and observe how the system recovers (or fails).
-  - Practical Learning Cards: Each infrastructure node is paired with a short, beginner-friendly learning card focusing on practical understanding.
+TOROLLO is an interactive, visual sandbox designed to help students and developers learn backend architecture, Docker, networking, databases, and system design by actually building and running systems on their local machines.
 
 ---
 
 ## ⚡ Quick Start
 
-Run the lab instantly from your terminal without needing to install anything permanently:
+Run the lab instantly from your terminal without needing to clone the repo or install anything permanently:
 
 ```bash
 npx torollo start
 ```
-*(Ensure Docker Desktop is running before starting)*
+*(Note: Ensure Docker Desktop is running before starting, as Torollo orchestrates real local containers)*
 
 ---
 
-## 🎨 Core Vision & The Canvas
+## 🏗️ Supported Infrastructure Nodes
 
-When a user opens TOROLLO, they are presented with an interactive visual canvas where they can design, run, and experiment with backend systems.
+You can drag and drop a wide range of infrastructure components onto the canvas. Everything is backed by **real Docker containers** running locally on your machine.
 
-### Supported Infrastructure Nodes
-You can drag and drop a wide range of infrastructure components:
-*   **Computing:** Ubuntu Server, Auto Scaling Group (ASG)
-*   **Databases:** PostgreSQL, MongoDB (NoSQL)
-*   **Networking & Security:** VPC, Subnets, NAT Gateway, Load Balancer (Nginx), Security Groups
+*   **Computing**
+    *   **Ubuntu Server:** A basic Linux container. Includes a fully functional, native web-terminal integrated directly into your browser via WebSockets.
+    *   **Auto Scaling Group (ASG):** Define a template and scale replicas up or down instantly.
+*   **Databases**
+    *   **PostgreSQL:** Relational database node. Features a built-in interactive Explorer to view schemas, tables, and execute SQL queries directly from the UI.
+    *   **MongoDB (NoSQL):** Document database node. Features an interactive Explorer to view collections and run JSON queries without needing external GUI clients.
+*   **Networking & Security**
+    *   **VPC & Subnets:** Isolated network boundaries backed by custom Docker bridge networks.
+    *   **Security Groups:** Drag-and-drop visual firewall rules (Inbound/Outbound). Rules are converted and enforced using actual `iptables` injected securely into the containers.
+    *   **Load Balancer (Nginx):** Automatically generates upstream `nginx.conf` configurations based on the nodes you wire to it.
+    *   **NAT Gateway:** Provides outbound internet access for private subnets using true Linux `ip_forward=1` and `MASQUERADE` routing.
 
-### 🚀 Coming Very Soon
-*   **Terraform Generation:** Automatic infrastructure-as-code generation for each major cloud provider (AWS, Azure, GCP).
-*   **Databases:** Redis
+---
+
+## 🚀 Coming Very Soon
+
+*   **Terraform Generation:** Automatic Infrastructure-as-Code (IaC) generation for your visual architectures, supporting every major cloud provider (AWS, Azure, GCP).
+*   **Databases:** Redis In-Memory Cache
 *   **Message Brokers:** RabbitMQ, Kafka
 *   **Application Services:** API Service, Microservices Host, Serverless Functions
-*   **Observability:** Metrics & Monitoring Components
+*   **Observability:** Live Metrics, Logs, & Monitoring Components
 
 ---
 
-## 🛠️ Getting Started / Architecture Overview
+## 🎨 Core Features & Architecture
 
-### Backend
-The backend controls the local Docker daemon, manages system state, and coordinates container creation, teardown, and terminal streaming.
-*   **Technology:** Node.js, Express, TypeScript, Dockerode (Docker API client).
+### Interactive Learning by Doing
+Instead of reading passive, theory-heavy documentation, you learn by *doing*:
+- **Create Systems:** Drag and drop real components to build architectures.
+- **Run & Connect:** Wire services together and see how they interact.
+- **Simulate Traffic:** Use the built-in Network Simulator to send pings and watch mock traffic flow through the system.
+- **Web Terminals:** Instantly open a root shell into any Ubuntu or Database container straight from the browser.
 
-### Frontend
-The frontend renders the interactive visual grid, node inspector panels, learning cards, and coordinates node dragging/wiring.
-*   **Technology:** React, TypeScript, React Flow (for node orchestration and canvas routing), CSS Modules.
+### Architecture Overview
+*   **Backend:** Node.js, Express, TypeScript, and Dockerode. The backend acts as the supervisor—it manipulates the local Docker daemon, compiles your visual network topology into real `iptables` rules, and manages persistent state in `~/.torollo/projects.json`.
+*   **Frontend:** React, TypeScript, Vite, and React Flow. Renders the interactive visual grid, node inspector modals, database explorers, and `xterm.js` terminals.
 
 ---
+
+## 🛡️ Core Philosophy
+
+Everything runs **locally** on your machine. 
+- **No Cloud integrations** (No AWS credentials needed).
+- **No remote infrastructure** is created, billed, or managed. 
+- All nodes in the workspace correspond exactly to live Docker containers on your local system.
 
 *Note: This project is strictly educational. It is not an AWS clone or a production infrastructure management tool—it is a sandboxed simulator designed to make system design tangible, visual, and fun.*
