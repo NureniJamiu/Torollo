@@ -110,11 +110,11 @@ if (command === 'start') {
             env: { PORT: backendPort },
             prefixColor: 'blue' 
           },
-          { 
-            command: `npx vite preview --port ${frontendPort} --strictPort --host 127.0.0.1`, 
-            name: 'frontend', 
+          {
+            command: `npx serve -s dist -l ${frontendPort}`,
+            name: 'frontend',
             cwd: frontendPath,
-            prefixColor: 'green' 
+            prefixColor: 'green'
           }
         ],
         {
