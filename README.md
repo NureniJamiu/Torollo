@@ -1,4 +1,4 @@
-![cover-torollo](./assets/cover-torollo.png)
+![cover-torollo](https://unpkg.com/torollo/assets/cover-torollo.png)
 
 # TOROLLO — Backend Systems Lab
 
