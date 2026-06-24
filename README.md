@@ -2,9 +2,18 @@
 
 # TOROLLO — Backend Systems Lab
 
+[![npm version](https://img.shields.io/npm/v/torollo.svg?style=flat-square)](https://www.npmjs.com/package/torollo)
+[![license](https://img.shields.io/npm/l/torollo.svg?style=flat-square)](https://github.com/Derssa/torollo/blob/main/LICENSE)
+[![node-current](https://img.shields.io/node/v/torollo.svg?style=flat-square)](https://nodejs.org)
+
 > **A local-first visual simulator and educational playground for backend engineering and system design, inspired by Packet Tracer.**
 
 TOROLLO is an interactive, visual sandbox designed to help students and developers learn backend architecture, Docker, networking, databases, and system design by actually building and running systems on their local machines.
+
+## 🛠️ Technology Stack
+*   **Frontend:** React, TypeScript, Vite, React Flow, xterm.js
+*   **Backend:** Node.js, Express, TypeScript, Socket.io
+*   **Orchestration:** Docker, Dockerode (Interacts directly with your local Docker Daemon)
 
 ---
 

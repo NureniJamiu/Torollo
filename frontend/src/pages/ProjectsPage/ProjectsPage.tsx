@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import InputModal from '../../shared/components/InputModal';
 import ConfirmModal from '../../shared/components/ConfirmModal';
@@ -15,11 +16,17 @@ interface ProjectsPageProps {
 declare const __APP_VERSION__: string;
 
 export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
+  const { t, i18n } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
+
+  const toggleLanguage = () => {
+    const nextLang = i18n.language === 'fr' ? 'en' : 'fr';
+    i18n.changeLanguage(nextLang);
+  };
 
   const fetchProjects = async () => {
     try {
@@ -89,19 +96,28 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <h1 style={styles.title}>Project Stacks</h1>
+              <h1 style={styles.title}>{t('projects.title')}</h1>
               <span style={styles.badge}>v{__APP_VERSION__}</span>
             </div>
-            <p style={styles.subtitle}>Organize your infrastructure labs</p>
+            <p style={styles.subtitle}>{t('projects.subtitle')}</p>
           </div>
         </div>
-        <button onClick={() => setShowCreateModal(true)} style={styles.createBtn} id="create-project-btn">
-          <Plus size={16} style={{ marginRight: 6 }} />
-          New Project
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            onClick={toggleLanguage} 
+            style={{...styles.createBtn, background: 'var(--bg-surface-solid)', color: 'var(--color-text-primary)', border: '1px solid var(--border-color)', padding: '0 12px'}} 
+            title="Toggle Language"
+          >
+            {i18n.language.toUpperCase()}
+          </button>
+          <button onClick={() => setShowCreateModal(true)} style={styles.createBtn} id="create-project-btn">
+            <Plus size={16} style={{ marginRight: 6 }} />
+            {t('projects.newProject')}
+          </button>
+        </div>
       </div>
 
-      {loading && <p style={styles.loading}>Loading projects...</p>}
+      {loading && <p style={styles.loading}>{t('projects.loading')}</p>}
 
       {/* Project grid */}
       <div style={styles.grid}>
@@ -120,10 +136,10 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
       {/* Modals */}
       {showCreateModal && (
         <InputModal
-          title="Create Project Stack"
-          label="Give your project a descriptive name to organize your containers."
-          placeholder="e.g. Web App Lab, API Gateway Test"
-          submitText="Create Project"
+          title={t('projects.createTitle')}
+          label={t('projects.createLabel')}
+          placeholder={t('projects.createPlaceholder')}
+          submitText={t('projects.createSubmit')}
           onSubmit={handleCreateProject}
           onCancel={() => setShowCreateModal(false)}
         />
@@ -131,9 +147,9 @@ export default function ProjectsPage({ onSelectProject }: ProjectsPageProps) {
 
       {deleteTarget && (
         <ConfirmModal
-          title="Delete Project"
-          message={`This will permanently delete "${deleteTarget.name}" and stop/remove all associated Docker containers. This action cannot be undone.`}
-          confirmText="Delete Project"
+          title={t('projects.deleteTitle')}
+          message={t('projects.deleteMessage').replace('{{name}}', deleteTarget.name)}
+          confirmText={t('projects.deleteConfirm')}
           variant="danger"
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setDeleteTarget(null)}
