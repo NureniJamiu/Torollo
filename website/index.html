@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563EB">
+
+  <title>Torollo — Visual system-design simulator with real Docker containers</title>
+  <meta name="description" content="The Packet Tracer of backend engineering. Drag-and-drop infrastructure that runs as real local Docker containers — terminals, databases, firewalls, load balancers. Free, open source, 100% local.">
+
+  <!-- REPLACE_DOMAIN: swap https://torollo.dev for the real domain before deploying -->
+  <link rel="canonical" href="https://torollo.dev/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://torollo.dev/">
+  <meta property="og:title" content="Torollo — Visual system-design simulator with real Docker containers">
+  <meta property="og:description" content="Drag infrastructure onto a canvas — every node becomes a real Docker container on your machine. Free, open source, 100% local.">
+  <!-- og:image must be an absolute URL; 1584×396 works today — produce a 1200×630 crop later for better cards -->
+  <meta property="og:image" content="https://torollo.dev/assets/cover-torollo.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Torollo",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "description": "A local-first visual simulator and educational playground for backend engineering and system design. Every node on the canvas runs as a real Docker container.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://github.com/Derssa/torollo"
+  }
+  </script>
+</head>
+<body>
+
+<!--
+  HONESTY RULES (keep when editing):
+  - Only shipped capabilities appear in the features grid and "how it works".
+  - Every unshipped feature carries .badge--soon or .badge--pilot and sits near a waitlist CTA.
+  - Paid CTAs say "Join waitlist", never "Buy" / "Subscribe".
+  - No screenshots of unbuilt features.
+-->
+
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="nav-brand" href="#top">
+      <img src="assets/logo.png" alt="" width="30" height="27">
+      Torollo
+    </a>
+    <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Toggle menu">☰</button>
+    <ul class="nav-links" id="nav-menu">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#education">Education</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="pricing.html">Pricing</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">★ Star on GitHub</a>
+      <a class="btn btn-primary" href="#get-started">Get started free</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================== HERO ============================== -->
+  <section class="hero" id="get-started">
+    <div class="container hero-inner">
+      <div>
+        <span class="hero-badge"><span class="dot"></span>Open source · MIT · 100% local</span>
+        <h1>The Packet Tracer of backend engineering.</h1>
+        <p class="sub">
+          Torollo is a visual system-design lab. Drag infrastructure onto a canvas — and every node becomes a
+          <strong>real Docker container</strong> on your machine. Real terminals, real networks, real firewalls.
+          No account, no cloud, no cost.
+        </p>
+
+        <div class="term term-boot">
+          <div class="term-bar"><i></i><i></i><i></i><span class="term-title">torollo — zsh</span><button class="copy-btn" data-copy="npx torollo start" type="button">copy</button></div>
+          <div class="term-body">
+            <div class="line"><span class="prompt">$ </span>npx torollo start</div>
+            <div class="line"><span class="ok">✓</span> Docker daemon detected</div>
+            <div class="line"><span class="ok">✓</span> Backend supervisor running</div>
+            <div class="line"><span class="ok">✓</span> Lab ready — opening browser…</div>
+            <div class="line"><span class="dim">Drag your first node onto the canvas.</span><span class="cursor"></span></div>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">View on GitHub</a>
+          <a class="btn btn-ghost" href="#roadmap">Join the Pro waitlist →</a>
+        </div>
+        <p class="hero-note">Requires Node ≥ 18 and Docker running. Nothing is installed permanently.</p>
+      </div>
+
+      <div class="browser-frame">
+        <div class="frame-bar"><i></i><i></i><i></i></div>
+        <img src="assets/screenshot.png" alt="The Torollo canvas: a load balancer wired to application servers, a PostgreSQL node with its explorer open, and a web terminal" width="1917" height="907" loading="eager">
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= SOCIAL PROOF ========================== -->
+  <div class="proof">
+    <div class="container proof-inner">
+      <div class="proof-badges">
+        <a href="https://www.npmjs.com/package/torollo" rel="noopener" target="_blank"><img src="https://img.shields.io/npm/v/torollo.svg?label=version&amp;style=flat-square" alt="npm version" height="20"></a>
+        <a href="https://github.com/Derssa/torollo/blob/main/LICENSE" rel="noopener" target="_blank"><img src="https://img.shields.io/npm/l/torollo.svg?style=flat-square" alt="MIT license" height="20"></a>
+        <a href="https://github.com/Derssa/torollo" rel="noopener" target="_blank"><img src="https://img.shields.io/github/stars/Derssa/torollo?style=flat-square&amp;logo=github" alt="GitHub stars" height="20"></a>
+      </div>
+      <p class="proof-quote" style="margin:0">Not a diagram. A running system.</p>
+      <p class="proof-quote" style="margin:0">Built with React Flow, xterm.js &amp; Dockerode</p>
+    </div>
+  </div>
+
+  <!-- ========================= HOW IT WORKS ========================== -->
+  <section id="how">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">how it works</p>
+        <h2>From empty terminal to running architecture in one command.</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <p class="step-no">1</p>
+          <h3>Run one command</h3>
+          <p>Nothing to clone, nothing to install permanently. Torollo talks directly to your local Docker daemon.</p>
+          <span class="cmd"><span><span class="prompt">$ </span>npx torollo start</span></span>
+        </div>
+        <div class="step">
+          <p class="step-no">2</p>
+          <h3>Drag, drop, wire</h3>
+          <p>Ubuntu servers, PostgreSQL, MongoDB, Redis, VPCs and subnets, load balancers, NAT gateways, security groups, auto scaling groups — wire them together on the canvas.</p>
+        </div>
+        <div class="step">
+          <p class="step-no">3</p>
+          <h3>It&rsquo;s real</h3>
+          <p>Open a root terminal in any container. Run SQL from the built-in explorer. Send pings through the network simulator and watch nginx route the traffic you configured by drawing an edge.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== FEATURES ============================ -->
+  <section id="features">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">features</p>
+        <h2>Every node is a container. Every wire is a network.</h2>
+        <p class="lead">draw.io shows you a picture. Torollo gives you a shell. Everything below ships today, free.</p>
+      </div>
+
+      <div class="node-grid">
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">ubuntu-server</span><span class="badge badge--now">Available now</span></div>
+          <p>A real Linux container with a full root web terminal (xterm.js) right in your browser.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">postgres · mongo · redis</span><span class="badge badge--now">Available now</span></div>
+          <p>Each database ships with an interactive Explorer: browse schemas, collections and keys; run SQL, JSON queries or Redis commands from the UI.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">vpc &amp; subnets</span><span class="badge badge--now">Available now</span></div>
+          <p>Isolated network boundaries backed by real Docker bridge networks — real isolation, not colored boxes.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">security-groups</span><span class="badge badge--now">Available now</span></div>
+          <p>Visual inbound/outbound rules, enforced as actual iptables rules inside the containers.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">load-balancer</span><span class="badge badge--now">Available now</span></div>
+          <p>Wire nodes to an Nginx load balancer and the upstream nginx.conf is generated for you.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">nat-gateway</span><span class="badge badge--now">Available now</span></div>
+          <p>Outbound internet for private subnets using true Linux ip_forward and MASQUERADE routing.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">auto-scaling-group</span><span class="badge badge--now">Available now</span></div>
+          <p>Define a template once, then scale replicas up and down instantly.</p>
+        </div>
+        <div class="node-card">
+          <div class="node-head"><span class="node-name">network-simulator</span><span class="badge badge--now">Available now</span></div>
+          <p>Send pings and watch traffic flow through your topology. Save and reload projects locally.</p>
+        </div>
+      </div>
+
+      <p class="node-footnote">The app UI is available in English and French. Runs anywhere Node ≥ 18 and Docker run — Windows, macOS, Linux.</p>
+    </div>
+  </section>
+
+  <!-- ========================== EDUCATION ============================ -->
+  <section class="edu" id="education">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">education</p>
+        <h2>Teach system design on real infrastructure — without the Docker install nightmare.</h2>
+        <p class="lead">We&rsquo;re building an education platform on top of Torollo and looking for a handful of design partners to shape it.</p>
+      </div>
+
+      <div class="edu-grid">
+        <div class="edu-card">
+          <p class="pain">A class of 30 can&rsquo;t all install Docker</p>
+          <p>Hosted labs that run in the browser — students click a link and start building.</p>
+          <span class="badge badge--pilot">In development — pilot partners</span>
+        </div>
+        <div class="edu-card">
+          <p class="pain">An empty canvas terrifies beginners</p>
+          <p>Guided roadmaps with ordered steps, hints, and a clear goal: &ldquo;build a resilient 3-tier app&rdquo;.</p>
+          <span class="badge badge--pilot">In development — pilot partners</span>
+        </div>
+        <div class="edu-card">
+          <p class="pain">Slides can&rsquo;t tell you if the firewall actually works</p>
+          <p>Auto-grading validates the real running system state — did the container start, does the app reach the database, is the port actually blocked. No diagram tool or video course can do that.</p>
+          <span class="badge badge--pilot">In development — pilot partners</span>
+        </div>
+      </div>
+
+      <p class="edu-precedent">Cisco built NetAcad on Packet Tracer. We&rsquo;re building the same for backend engineering.</p>
+
+      <div class="edu-cta">
+        <!-- REPLACE_EMAIL: swap hello@torollo.dev for the real contact address -->
+        <a class="btn btn-primary" href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Book a pilot — become a design partner</a>
+        <span class="badge badge--pilot">Pilot partners get the platform shaped around their curriculum</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= OPEN SOURCE =========================== -->
+  <section id="opensource">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">open source</p>
+        <h2>Free forever for individuals. Built in the open.</h2>
+        <p class="lead">Torollo is MIT licensed. The community drives new nodes and integrations — come build with us.</p>
+      </div>
+      <div class="oss-grid">
+        <div class="oss-card">
+          <h3>Star the repo</h3>
+          <p>Stars are how new people find Torollo. It takes one click and it genuinely helps.</p>
+          <a href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">github.com/Derssa/torollo →</a>
+        </div>
+        <div class="oss-card">
+          <h3>Contribute a node</h3>
+          <p>Kafka? RabbitMQ? Observability? New nodes follow a documented pattern — one folder, one registry line.</p>
+          <a href="https://github.com/Derssa/torollo/blob/main/CONTRIBUTING.md" rel="noopener" target="_blank">Read the contributing guide →</a>
+        </div>
+        <div class="oss-card">
+          <h3>Report an issue</h3>
+          <p>Found a bug, or a node you wish existed? Open an issue — we triage fast.</p>
+          <a href="https://github.com/Derssa/torollo/issues" rel="noopener" target="_blank">Open an issue →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== ROADMAP + WAITLIST ======================= -->
+  <section id="roadmap">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">roadmap</p>
+        <h2>What&rsquo;s coming next.</h2>
+        <p class="lead">None of this is available yet — that&rsquo;s the point of the waitlist. One email when it ships, nothing else.</p>
+      </div>
+
+      <div class="chips">
+        <span class="chip">cloud save &amp; sync <span class="badge badge--soon">Coming soon</span></span>
+        <span class="chip">sharing &amp; collaboration <span class="badge badge--soon">Coming soon</span></span>
+        <span class="chip">terraform generation <span class="badge badge--soon">Coming soon</span></span>
+        <span class="chip">kafka &amp; rabbitmq nodes <span class="badge badge--soon">Coming soon</span></span>
+        <span class="chip">observability — metrics &amp; logs <span class="badge badge--soon">Coming soon</span></span>
+        <span class="chip">hosted labs &amp; auto-graded roadmaps <span class="badge badge--pilot">Pilot partners</span></span>
+      </div>
+
+      <div class="waitlist-box">
+        <h3>Get it first. Join the waitlist.</h3>
+        <p>No spam. One email when Pro launches, one when education pilots open. Joining the waitlist is not a purchase.</p>
+        <!-- REPLACE_FORM_ID: create a form at formspree.io and swap the ID below (also in js/main.js) -->
+        <form class="waitlist" action="https://formspree.io/f/REPLACE_FORM_ID" method="POST">
+          <label class="visually-hidden" for="wl-email">Email address</label>
+          <input id="wl-email" type="email" name="email" required placeholder="you@company.com" autocomplete="email">
+          <input type="hidden" name="plan" value="any">
+          <input type="hidden" name="source" value="landing-roadmap">
+          <input type="text" name="_gotcha" style="display:none" tabindex="-1" aria-hidden="true">
+          <button class="btn btn-primary" type="submit">Join the waitlist</button>
+        </form>
+        <p class="form-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== PRICING TEASER ========================= -->
+  <section id="pricing-teaser">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">pricing</p>
+        <h2>Free for everything that exists today.</h2>
+      </div>
+      <div class="plans plans--teaser">
+        <div class="plan plan--free">
+          <p class="plan-name">Free</p>
+          <p class="plan-price">0€</p>
+          <p class="plan-tagline">Everything shipping today. Local, open source, no account.</p>
+          <ul>
+            <li>All nodes, terminals &amp; explorers</li>
+            <li>Real networking &amp; security groups</li>
+            <li>Unlimited local projects</li>
+          </ul>
+          <span class="badge badge--now" style="margin-bottom:14px">Available now</span>
+          <a class="btn btn-dark" href="#get-started">Get started free</a>
+        </div>
+        <div class="plan plan--featured">
+          <p class="plan-name">Pro</p>
+          <p class="plan-price">12€<small>/month</small></p>
+          <p class="plan-tagline">Cloud save, sharing &amp; collaboration — when it ships.</p>
+          <ul>
+            <li class="soon">Cloud save &amp; sync</li>
+            <li class="soon">Project sharing</li>
+            <li class="soon">Real-time collaboration</li>
+          </ul>
+          <span class="badge badge--soon" style="margin-bottom:14px">Coming soon — join waitlist</span>
+          <a class="btn btn-primary" href="pricing.html#waitlist">Join waitlist</a>
+        </div>
+        <div class="plan">
+          <p class="plan-name">Education</p>
+          <p class="plan-price">Custom</p>
+          <p class="plan-tagline">Hosted labs, auto-graded roadmaps, teacher dashboard.</p>
+          <ul>
+            <li class="soon">Browser-only labs for classes</li>
+            <li class="soon">Auto-graded curriculum</li>
+            <li class="soon">Progress dashboard</li>
+          </ul>
+          <span class="badge badge--pilot" style="margin-bottom:14px">In development — pilot partners</span>
+          <a class="btn btn-ghost" href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Book a pilot</a>
+        </div>
+      </div>
+      <p style="margin-top:24px"><a href="pricing.html">See full pricing →</a></p>
+    </div>
+  </section>
+
+  <!-- ============================= FAQ =============================== -->
+  <section id="faq">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">faq</p>
+        <h2>Questions, answered straight.</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Is Torollo really free?</summary>
+          <p>Yes. Everything that exists today — every node, terminal, explorer and network feature — is free, open source (MIT), and runs locally. Paid plans will only ever cover new cloud services like save/sync and collaboration.</p>
+        </details>
+        <details>
+          <summary>Does it send my data anywhere?</summary>
+          <p>No. Torollo is 100% local: no account, no telemetry backend, no cloud. Your projects are saved on your own machine.</p>
+        </details>
+        <details>
+          <summary>Do I need Docker?</summary>
+          <p>Yes — Torollo orchestrates real containers through your local Docker daemon, which is exactly what makes it more than a diagram tool. Hosted browser-only labs are in development for classrooms.</p>
+        </details>
+        <details>
+          <summary>Is this just another diagram tool?</summary>
+          <p>No. In draw.io a database is a cylinder icon. In Torollo it&rsquo;s a running PostgreSQL container you can open a shell into, query, firewall, and load-balance.</p>
+        </details>
+        <details>
+          <summary>What platforms does it run on?</summary>
+          <p>Anywhere Node ≥ 18 and Docker run: Windows, macOS, and Linux.</p>
+        </details>
+        <details>
+          <summary>Can I buy Pro today?</summary>
+          <p>Not yet — Pro is in development and the waitlist is exactly that: a list, not a purchase. The Free version is fully usable today.</p>
+        </details>
+        <details>
+          <summary>How do schools and bootcamps get started?</summary>
+          <p>We&rsquo;re onboarding a small number of design partners for the education platform. <a href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Book a pilot</a> and we&rsquo;ll shape the curriculum, grading and dashboard around your program.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================ FOOTER =============================== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p class="footer-brand"><img src="assets/logo.png" alt="" width="28" height="26">Torollo</p>
+        <p class="tagline">A local-first visual lab for backend engineering. Drag, drop — and it actually runs.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+          <li><a href="#roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">GitHub</a></li>
+          <li><a href="https://www.npmjs.com/package/torollo" rel="noopener" target="_blank">npm</a></li>
+          <li><a href="https://github.com/Derssa/torollo/blob/main/CONTRIBUTING.md" rel="noopener" target="_blank">Contributing</a></li>
+          <li><a href="https://github.com/Derssa/torollo/blob/main/LICENSE" rel="noopener" target="_blank">License (MIT)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Education pilots</a></li>
+          <li><a href="mailto:hello@torollo.dev">hello@torollo.dev</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>MIT © 2026 Torollo</span>
+      <span>$ npx torollo start</span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

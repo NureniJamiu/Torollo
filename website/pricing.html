@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563EB">
+
+  <title>Pricing — Torollo</title>
+  <meta name="description" content="Torollo is free and open source for everything that exists today. Pro, Team and Education plans are coming — join the waitlist or book an education pilot.">
+
+  <!-- REPLACE_DOMAIN: swap https://torollo.dev for the real domain before deploying -->
+  <link rel="canonical" href="https://torollo.dev/pricing.html">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://torollo.dev/pricing.html">
+  <meta property="og:title" content="Pricing — Torollo">
+  <meta property="og:description" content="Free for everything that exists. Fair prices for what's next.">
+  <meta property="og:image" content="https://torollo.dev/assets/cover-torollo.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!--
+  HONESTY RULES (keep when editing):
+  - Paid plans are NOT purchasable: CTAs say "Join waitlist", never "Buy" / "Subscribe".
+  - Every unshipped line item carries the ◷ (li.soon) marker or a --soon/--pilot badge.
+  - The honesty banner stays above the plan grid.
+-->
+
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="nav-brand" href="index.html">
+      <img src="assets/logo.png" alt="" width="30" height="27">
+      Torollo
+    </a>
+    <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Toggle menu">☰</button>
+    <ul class="nav-links" id="nav-menu">
+      <li><a href="index.html#features">Features</a></li>
+      <li><a href="index.html#how">How it works</a></li>
+      <li><a href="index.html#education">Education</a></li>
+      <li><a href="index.html#roadmap">Roadmap</a></li>
+      <li><a href="pricing.html">Pricing</a></li>
+      <li><a href="index.html#faq">FAQ</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">★ Star on GitHub</a>
+      <a class="btn btn-primary" href="index.html#get-started">Get started free</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="page-head">
+    <div class="container">
+      <p class="eyebrow">pricing</p>
+      <h1>Free for everything that exists.<br>Fair prices for what&rsquo;s next.</h1>
+      <p class="lead">Everything Torollo does today is free and open source. The plans below cover cloud services we&rsquo;re building now — join the waitlist and you&rsquo;ll get one email when they launch.</p>
+    </div>
+  </div>
+
+  <section id="plans">
+    <div class="container">
+
+      <div class="honesty">
+        <span aria-hidden="true">⚠</span>
+        <span><strong>Paid plans aren&rsquo;t purchasable yet.</strong> Joining the waitlist is not a payment and creates no obligation — it&rsquo;s one email when we launch. Everything marked &ldquo;Available now&rdquo; is free today.</span>
+      </div>
+
+      <div class="plans">
+        <div class="plan plan--free">
+          <p class="plan-name">Free</p>
+          <p class="plan-price">0€ <small>forever</small></p>
+          <p class="plan-tagline">Everything shipping today. Local, open source, no account needed.</p>
+          <ul>
+            <li>All infrastructure nodes (Ubuntu, PostgreSQL, MongoDB, Redis, VPC, subnets, security groups, load balancer, NAT, ASG)</li>
+            <li>Web terminals &amp; database explorers</li>
+            <li>Real Docker networking &amp; iptables firewalls</li>
+            <li>Network simulator</li>
+            <li>Unlimited local projects</li>
+            <li>Community support on GitHub</li>
+          </ul>
+          <span class="badge badge--now" style="margin-bottom:14px">Available now</span>
+          <span class="cmd"><span><span class="prompt">$ </span>npx torollo start</span><button class="copy-btn" data-copy="npx torollo start" type="button">copy</button></span>
+        </div>
+
+        <div class="plan plan--featured">
+          <p class="plan-name">Pro</p>
+          <p class="plan-price">12€<small>/month — or 99€/year</small></p>
+          <p class="plan-tagline">For solo builders who want their labs everywhere.</p>
+          <ul>
+            <li>Everything in Free</li>
+            <li class="soon">Cloud save &amp; multi-machine sync</li>
+            <li class="soon">Share projects with a link</li>
+            <li class="soon">Real-time collaboration</li>
+            <li class="soon">Template library</li>
+          </ul>
+          <span class="badge badge--soon" style="margin-bottom:14px">Coming soon — join waitlist</span>
+          <a class="btn btn-primary" href="#waitlist" data-plan="pro">Join waitlist</a>
+        </div>
+
+        <div class="plan">
+          <p class="plan-name">Team</p>
+          <p class="plan-price">9€<small>/user/month — min 3 seats</small></p>
+          <p class="plan-tagline">Shared workspaces and central billing for teams.</p>
+          <ul>
+            <li>Everything in Pro</li>
+            <li class="soon">Shared team workspace</li>
+            <li class="soon">Centralized billing</li>
+            <li class="soon">Member management</li>
+          </ul>
+          <span class="badge badge--soon" style="margin-bottom:14px">Coming soon — join waitlist</span>
+          <a class="btn btn-ghost" href="#waitlist" data-plan="team">Join waitlist</a>
+        </div>
+
+        <div class="plan">
+          <span class="ribbon">limited launch offer</span>
+          <p class="plan-name">Lifetime</p>
+          <p class="plan-price">149€ <small>one-time</small></p>
+          <p class="plan-tagline">Early-bird: all Pro features, forever, for backing us now. Offer ends when the SaaS stabilizes.</p>
+          <ul>
+            <li class="soon">All Pro features, for life</li>
+            <li class="soon">Early-adopter badge &amp; input on the roadmap</li>
+            <li class="soon">Priority support</li>
+          </ul>
+          <span class="badge badge--soon" style="margin-bottom:14px">Coming soon — join waitlist</span>
+          <a class="btn btn-ghost" href="#waitlist" data-plan="lifetime">Join waitlist</a>
+        </div>
+
+        <div class="plan">
+          <p class="plan-name">Education</p>
+          <p class="plan-price">Custom <small>per class or per seat</small></p>
+          <p class="plan-tagline">For bootcamps, schools and internal training programs.</p>
+          <ul>
+            <li class="soon">Hosted labs — browser only, no local Docker</li>
+            <li class="soon">Auto-graded guided roadmaps</li>
+            <li class="soon">Teacher dashboard &amp; class progress</li>
+            <li class="soon">SSO for institutions</li>
+          </ul>
+          <span class="badge badge--pilot" style="margin-bottom:14px">In development — pilot partners</span>
+          <!-- REPLACE_EMAIL: swap hello@torollo.dev for the real contact address -->
+          <a class="btn btn-dark" href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Book a pilot</a>
+        </div>
+      </div>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption class="visually-hidden">Feature comparison between Free, Pro, Team and Education plans</caption>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Free</th>
+              <th scope="col">Pro</th>
+              <th scope="col">Team</th>
+              <th scope="col">Education</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">All nodes, terminals &amp; explorers <span class="badge badge--now">Available now</span></th>
+              <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Real networking, firewalls &amp; simulator <span class="badge badge--now">Available now</span></th>
+              <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Unlimited local projects <span class="badge badge--now">Available now</span></th>
+              <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Cloud save &amp; sync <span class="badge badge--soon">Coming soon</span></th>
+              <td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Sharing &amp; collaboration <span class="badge badge--soon">Coming soon</span></th>
+              <td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Shared team workspace <span class="badge badge--soon">Coming soon</span></th>
+              <td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Hosted browser-only labs <span class="badge badge--pilot">Pilot</span></th>
+              <td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Auto-graded roadmaps <span class="badge badge--pilot">Pilot</span></th>
+              <td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td>
+            </tr>
+            <tr>
+              <th scope="row">Teacher dashboard &amp; SSO <span class="badge badge--pilot">Pilot</span></th>
+              <td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="pricing-faq">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">pricing faq</p>
+        <h2>The fine print, in plain words.</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>When can I actually pay?</summary>
+          <p>When cloud save and sharing ship. Waitlist members hear first and get the early-bird lifetime offer before it closes.</p>
+        </details>
+        <details>
+          <summary>Will the Free plan get worse when paid plans launch?</summary>
+          <p>No. Everything free today stays free — it&rsquo;s MIT-licensed open source running on your machine. Paid plans only cover new services that run on our servers.</p>
+        </details>
+        <details>
+          <summary>What exactly does Lifetime include?</summary>
+          <p>All Pro features for life, for a one-time 149€. It&rsquo;s a limited launch offer to back development early; it will be withdrawn once the service is stable.</p>
+        </details>
+        <details>
+          <summary>How is Education priced?</summary>
+          <p>Per class or per seat, shaped with each pilot partner. If you run a bootcamp, school course, or internal training program, <a href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">book a pilot</a> and we&rsquo;ll scope it together.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="waitlist">
+    <div class="container">
+      <div class="waitlist-box">
+        <h3>Join the waitlist</h3>
+        <p>Pick a plan above or just drop your email. One message when Pro launches — that&rsquo;s the whole deal.</p>
+        <!-- REPLACE_FORM_ID: create a form at formspree.io and swap the ID below (also in js/main.js) -->
+        <form class="waitlist" action="https://formspree.io/f/REPLACE_FORM_ID" method="POST">
+          <label class="visually-hidden" for="wl-email">Email address</label>
+          <input id="wl-email" type="email" name="email" required placeholder="you@company.com" autocomplete="email">
+          <input type="hidden" name="plan" value="any">
+          <input type="hidden" name="source" value="pricing">
+          <input type="text" name="_gotcha" style="display:none" tabindex="-1" aria-hidden="true">
+          <button class="btn btn-primary" type="submit">Join the waitlist</button>
+        </form>
+        <p class="form-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p class="footer-brand"><img src="assets/logo.png" alt="" width="28" height="26">Torollo</p>
+        <p class="tagline">A local-first visual lab for backend engineering. Drag, drop — and it actually runs.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+          <li><a href="index.html#roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Derssa/torollo" rel="noopener" target="_blank">GitHub</a></li>
+          <li><a href="https://www.npmjs.com/package/torollo" rel="noopener" target="_blank">npm</a></li>
+          <li><a href="https://github.com/Derssa/torollo/blob/main/CONTRIBUTING.md" rel="noopener" target="_blank">Contributing</a></li>
+          <li><a href="https://github.com/Derssa/torollo/blob/main/LICENSE" rel="noopener" target="_blank">License (MIT)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:hello@torollo.dev?subject=Torollo%20education%20pilot">Education pilots</a></li>
+          <li><a href="mailto:hello@torollo.dev">hello@torollo.dev</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>MIT © 2026 Torollo</span>
+      <span>$ npx torollo start</span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
