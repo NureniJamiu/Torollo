@@ -1195,20 +1195,21 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
   const handleRenameNode = async (newName: string) => {
     if (!renamingNode) return;
     const { id, currentName } = renamingNode;
+    const trimmedNewName = newName.trim();
 
     // Guard against renaming to the same name
-    if (newName.trim().toLowerCase() === currentName.toLowerCase()) {
-      showNotification({ type: 'info', message: `The node is already named "${currentName}".` });
+    if (trimmedNewName.toLowerCase() === currentName.toLowerCase()) {
+      showNotification({ type: 'warning', message: `The node is already named "${currentName}".` });
       setRenamingNode(null);
       return;
     }
 
     // Guard against duplicate names (same check used at creation time)
     const exists = containers.some(
-      c => c.name.toLowerCase() === newName.toLowerCase() && c.id !== id
+      c => c.name.toLowerCase() === trimmedNewName.toLowerCase() && c.id !== id
     );
     if (exists) {
-      showNotification({ type: 'error', message: `A node named "${newName}" already exists in this project.` });
+      showNotification({ type: 'error', message: `A node named "${trimmedNewName}" already exists in this project.` });
       return;
     }
 
@@ -1216,11 +1217,19 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
       const res = await fetch(`${API_BASE}/api/projects/${projectId}/containers/${id}/rename`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newName }),
+        body: JSON.stringify({ newName: trimmedNewName }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        showNotification({ type: 'error', message: data.error || 'Rename failed.' });
+        let message = 'Rename failed.';
+        try {
+          const data = await res.json();
+          if (typeof data?.error === 'string' && data.error.trim()) {
+            message = data.error;
+          }
+        } catch {
+          // Keep the generic message when the server returns a non-JSON body.
+        }
+        showNotification({ type: 'error', message });
         return;
       }
     } catch {
@@ -1231,13 +1240,13 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
     // Migrate the position key from the old name to the new name so the node
     // does not lose its canvas position after being renamed.
     if (positionsRef.current[currentName]) {
-      positionsRef.current[newName] = positionsRef.current[currentName];
+      positionsRef.current[trimmedNewName] = positionsRef.current[currentName];
       delete positionsRef.current[currentName];
       localStorage.setItem(`akal-lab-graph-layout-${projectId}`, JSON.stringify(positionsRef.current));
     }
 
     setRenamingNode(null);
-    showToast(`Node renamed to "${newName}"`);
+    showToast(`Node renamed to "${trimmedNewName}"`);
     await fetchContainers();
   };
 

@@ -226,11 +226,34 @@ export class ContainerController {
     try {
       const { projectId, id } = req.params;
       const { newName } = req.body;
-      if (!newName) {
+      const trimmedNewName = typeof newName === 'string' ? newName.trim() : '';
+      if (!trimmedNewName) {
         res.status(400).json({ error: 'newName is required' });
         return;
       }
-      await ContainerService.renameContainer(id as string, projectId as string, newName);
+
+      let resolvedProjectId: string | undefined;
+      try {
+        const inspectData = await docker.getContainer(id as string).inspect();
+        resolvedProjectId = inspectData.Config.Labels['akal.project.id'];
+      } catch (inspectErr) {
+        console.warn(`Failed to inspect container before renaming:`, inspectErr);
+      }
+
+      if (!resolvedProjectId) {
+        throw new Error('Unable to resolve project ID from container labels');
+      }
+
+      await ContainerService.renameContainer(id as string, resolvedProjectId, trimmedNewName);
+
+      const config = await ProjectService.getNetworkConfig(resolvedProjectId);
+      if (config) {
+        NetworkService.clearPolicyHash(resolvedProjectId);
+        NetworkService.applyPolicy(resolvedProjectId, config).catch(err => {
+          console.error(`Failed to re-apply network policy on rename:`, err);
+        });
+      }
+
       res.json({ success: true });
     } catch (err: any) {
       if (err.message && err.message.includes('Renaming a container with the same name')) {

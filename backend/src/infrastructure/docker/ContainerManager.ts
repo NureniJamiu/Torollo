@@ -408,6 +408,7 @@ export class ContainerManager {
   ): Promise<void> {
     const container = docker.getContainer(containerId);
     const safeName = `${this.LAB_PREFIX}${projectId}-${newName.replace(/[^a-zA-Z0-9-_]/g, '')}`;
+    const safeAlias = newName.trim().replace(/[^a-zA-Z0-9-_]/g, '');
 
     try {
       const containerInfo = await container.inspect();
@@ -441,14 +442,26 @@ export class ContainerManager {
     try {
       await network.connect({
         Container: containerId,
-        EndpointConfig: { Aliases: [newName] }
+        EndpointConfig: { Aliases: [safeAlias || safeName] }
       });
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('already connected') || msg.includes('already exists')) {
         console.log(`[ContainerManager] Container ${containerId} already connected to network, ignoring error.`);
       } else {
-        throw err;
+        console.warn(`[ContainerManager] Failed to reconnect container ${containerId} with alias ${safeAlias || safeName}; retrying without aliases.`, err);
+        try {
+          await network.connect({
+            Container: containerId
+          });
+        } catch (fallbackErr: any) {
+          const fallbackMsg = fallbackErr.message || '';
+          if (fallbackMsg.includes('already connected') || fallbackMsg.includes('already exists')) {
+            console.log(`[ContainerManager] Container ${containerId} already connected to network, ignoring fallback error.`);
+          } else {
+            throw fallbackErr;
+          }
+        }
       }
     }
   }
