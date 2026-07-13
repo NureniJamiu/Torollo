@@ -3,6 +3,7 @@ import { VirtualEndpoint } from '../mapper/virtualNetworkMapper';
 import { NetworkIntent } from '../planner/enforcementPlanner';
 import docker from '../../../infrastructure/docker/DockerClient';
 import { ProjectService } from '../../projects/services/projectService';
+import { buildCidrCorrections, applyCidrCorrections } from './cidrCorrections';
 
 export class DockerNetworkProvider implements NetworkProvider {
   private async runExec(containerId: string, cmd: string[]): Promise<string> {
@@ -853,47 +854,19 @@ ${locationsConfig}
       }
     }));
 
-    // Write back the updated/shifted CIDRs to projects.json
-    let configChanged = false;
-
-    if (config.vpcConfig && config.vpcConfig.cidr !== vpcCidr) {
-      config.vpcConfig.cidr = vpcCidr;
-      configChanged = true;
-    }
-
-    if (config.subnets) {
-      for (const subnet of config.subnets) {
-        const resolvedCidr = resolvedCidrs[subnet.id];
-        if (resolvedCidr && subnet.cidr !== resolvedCidr) {
-          subnet.cidr = resolvedCidr;
-          configChanged = true;
-        }
-
-        // Also update any 'local' route destinations to match the shifted VPC CIDR
-        if (subnet.routes) {
-          for (const route of subnet.routes) {
-            if (route.target === 'local' && route.destination !== vpcCidr) {
-              route.destination = vpcCidr;
-              configChanged = true;
-            }
-          }
-        }
-      }
-    }
-
-    if (config.nodeIpMap) {
-      for (const [nodeId, ip] of Object.entries(ipMap)) {
-        if (config.nodeIpMap[nodeId] !== ip) {
-          config.nodeIpMap[nodeId] = ip;
-          configChanged = true;
-        }
-      }
-    }
-
-    if (configChanged) {
+    // Persist shifted CIDRs/IPs back to projects.json. Merge the corrections
+    // into a freshly read config: this plan may have been queued behind other
+    // work, and saving the config it started from would clobber any save that
+    // landed in the meantime.
+    const corrections = buildCidrCorrections(config, vpcCidr, resolvedCidrs, ipMap);
+    if (corrections) {
       console.log(`[DockerNetworkProvider] Persisting shifted CIDRs and IPs back to projects.json...`);
       try {
-        await ProjectService.saveNetworkConfig(projectId, config);
+        const currentConfig = await ProjectService.getNetworkConfig(projectId);
+        if (currentConfig) {
+          applyCidrCorrections(currentConfig, corrections);
+          await ProjectService.saveNetworkConfig(projectId, currentConfig);
+        }
       } catch (err) {
         console.error('[DockerNetworkProvider] Failed to persist shifted CIDRs to database:', err);
       }
