@@ -23,41 +23,53 @@ export class DockerInitializer {
       });
   }
 
+  /**
+   * Names of subnet networks referenced by current projects, or null when
+   * projects.json exists but cannot be parsed. A missing file means no
+   * projects, so every subnet network is a genuine orphan.
+   */
+  private static readActiveSubnetNetworkNames(): Set<string> | null {
+    const dbPath = path.join(os.homedir(), '.torollo', 'projects.json');
+    const names = new Set<string>();
+    if (!fs.existsSync(dbPath)) return names;
+    try {
+      const projects = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      if (!Array.isArray(projects)) throw new Error('projects.json is not an array');
+      for (const p of projects) {
+        for (const s of p.networkConfig?.subnets || []) {
+          names.add(`akal-subnet-${p.id}-${s.id}`);
+        }
+      }
+      return names;
+    } catch (err) {
+      console.error('[DockerInitializer] Failed to parse projects.json for orphaned network cleanup:', err);
+      return null;
+    }
+  }
+
   private static async ensureSharedNetwork(): Promise<void> {
     try {
       const networks = await docker.listNetworks();
 
-      // Clean up orphaned subnet networks (from deleted/wiped projects) on startup
-      const TOROLLO_DIR = path.join(os.homedir(), '.torollo');
-      const DB_PATH = path.join(TOROLLO_DIR, 'projects.json');
-      const activeSubnetNetNames = new Set<string>();
-      if (fs.existsSync(DB_PATH)) {
-        try {
-          const projects = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-          for (const p of projects) {
-            const subnets = p.networkConfig?.subnets || [];
-            for (const s of subnets) {
-              activeSubnetNetNames.add(`akal-subnet-${p.id}-${s.id}`);
+      // Clean up orphaned subnet networks (from deleted/wiped projects) on
+      // startup. When project metadata is unreadable, skip the cleanup rather
+      // than treating every subnet network as orphaned and deleting them all.
+      const activeSubnetNetNames = this.readActiveSubnetNetworkNames();
+      if (activeSubnetNetNames) {
+        for (const net of networks) {
+          if (net.Name.startsWith('akal-subnet-') && !activeSubnetNetNames.has(net.Name)) {
+            console.log(`[DockerInitializer] Cleaning up orphaned subnet network: ${net.Name}`);
+            try {
+              const network = docker.getNetwork(net.Id);
+              const netInspect = await network.inspect();
+              const connectedContainers = Object.keys(netInspect.Containers || {});
+              for (const cId of connectedContainers) {
+                await network.disconnect({ Container: cId, Force: true });
+              }
+              await network.remove();
+            } catch (err) {
+              console.error(`Failed to clean up orphaned network ${net.Name}:`, err);
             }
-          }
-        } catch (err) {
-          console.error('[DockerInitializer] Failed to parse projects.json for orphaned network cleanup:', err);
-        }
-      }
-
-      for (const net of networks) {
-        if (net.Name.startsWith('akal-subnet-') && !activeSubnetNetNames.has(net.Name)) {
-          console.log(`[DockerInitializer] Cleaning up orphaned subnet network: ${net.Name}`);
-          try {
-            const network = docker.getNetwork(net.Id);
-            const netInspect = await network.inspect();
-            const connectedContainers = Object.keys(netInspect.Containers || {});
-            for (const cId of connectedContainers) {
-              await network.disconnect({ Container: cId, Force: true });
-            }
-            await network.remove();
-          } catch (err) {
-            console.error(`Failed to clean up orphaned network ${net.Name}:`, err);
           }
         }
       }
