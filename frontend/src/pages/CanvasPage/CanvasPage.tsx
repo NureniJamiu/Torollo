@@ -1349,11 +1349,16 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           return;
         }
 
+        // Derive the subnet CIDR and local route from the current VPC CIDR:
+        // it may have shifted from the default 10.0.0.0/16 when Docker's
+        // address pool overlapped the requested range.
+        const vpcCidr = networkConfig.vpcConfig.cidr;
+        const vpcPrefix = vpcCidr.split('.').slice(0, 2).join('.');
         const newSubnet: Subnet = {
           id: `subnet-${Math.random().toString(36).substr(2, 9)}`,
           name: `${isPublic ? 'Public' : 'Private'} Subnet-${networkConfig.subnets.length + 1}`,
           type: isPublic ? 'public' : 'private',
-          cidr: `10.0.${networkConfig.subnets.length + 1}.0/24`,
+          cidr: `${vpcPrefix}.${networkConfig.subnets.length + 1}.0/24`,
           vpcId: 'root-vpc',
           position: position,
           width: subnetWidth,
@@ -1361,7 +1366,7 @@ export default function CanvasPage({ projectId, projectName, onBackToProjects, o
           columns: cols,
           rows: rows,
           routes: [
-            { destination: '10.0.0.0/16', target: 'local', description: 'Local VPC routing' },
+            { destination: vpcCidr, target: 'local', description: 'Local VPC routing' },
             ...(isPublic ? [{ destination: '0.0.0.0/0', target: 'igw', description: 'Internet access' }] : [])
           ]
         };
